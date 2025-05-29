@@ -24,7 +24,7 @@ const SelectTrigger = React.forwardRef(({ className, children, ...props }, ref) 
       aria-expanded={open}
       ref={ref}
       className={cn(
-        'flex h-10 w-full items-center justify-between rounded-md border border-gray-300 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+        'flex h-10 w-full items-center justify-between rounded-md border border-gray-300 dark:border-gray-700 bg-transparent px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
         className
       )}
       onClick={() => setOpen(!open)}
@@ -65,7 +65,7 @@ const SelectContent = React.forwardRef(({ className, children, ...props }, ref) 
       <div
         ref={ref}
         className={cn(
-          'absolute left-0 top-full z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border border-gray-200 bg-white py-1 shadow-lg',
+          'absolute left-0 top-full z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-1 shadow-lg',
           className
         )}
         {...props}
@@ -86,8 +86,8 @@ const SelectItem = React.forwardRef(({ className, children, value: itemValue, ..
     <div
       ref={ref}
       className={cn(
-        'relative flex w-full cursor-pointer select-none items-center py-1.5 px-3 text-sm outline-none hover:bg-gray-100',
-        isSelected && 'bg-gray-100 font-medium',
+        'relative flex w-full cursor-pointer select-none items-center py-1.5 px-3 text-sm text-gray-900 dark:text-gray-100 outline-none hover:bg-gray-100 dark:hover:bg-gray-700',
+        isSelected && 'bg-gray-100 dark:bg-gray-700 font-medium',
         className
       )}
       onClick={() => {

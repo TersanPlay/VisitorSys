@@ -156,7 +156,7 @@ const Reports = () => {
         .filter(visitor => visitor.company?.toLowerCase().includes(filters.company.toLowerCase()))
         .map(visitor => visitor.id)
       filteredVisits = filteredVisits.filter(visit => companyVisitorIds.includes(visit.visitorId))
-      filteredVisitors = filteredVisitors.filter(visitor => 
+      filteredVisitors = filteredVisitors.filter(visitor =>
         visitor.company?.toLowerCase().includes(filters.company.toLowerCase())
       )
     }
@@ -177,7 +177,7 @@ const Reports = () => {
       const duration = new Date(visit.endTime) - new Date(visit.startTime)
       return sum + duration
     }, 0)
-    const averageVisitDuration = completedVisits.length > 0 
+    const averageVisitDuration = completedVisits.length > 0
       ? Math.round(totalDuration / completedVisits.length / (1000 * 60)) // in minutes
       : 0
 
@@ -189,7 +189,7 @@ const Reports = () => {
       }
     })
     const topCompanies = Object.entries(companyCount)
-      .sort(([,a], [,b]) => b - a)
+      .sort(([, a], [, b]) => b - a)
       .slice(0, 5)
       .map(([company, count]) => ({ company, count }))
 
@@ -241,14 +241,14 @@ const Reports = () => {
   const exportReport = (format) => {
     try {
       const { visitors: filteredVisitors, visits: filteredVisits } = filteredData
-      
+
       if (format === 'csv') {
         // Export visits CSV
         const csvContent = [
           ['Data/Hora Entrada', 'Data/Hora Saída', 'Visitante', 'Empresa', 'Propósito', 'Status', 'Duração (min)'],
           ...filteredVisits.map(visit => {
             const visitor = visitors.find(v => v.id === visit.visitorId)
-            const duration = visit.endTime 
+            const duration = visit.endTime
               ? Math.round((new Date(visit.endTime) - new Date(visit.startTime)) / (1000 * 60))
               : 'Em andamento'
             return [
@@ -272,8 +272,131 @@ const Reports = () => {
         document.body.appendChild(link)
         link.click()
         document.body.removeChild(link)
-        
+
         toast.success('Relatório exportado com sucesso!')
+      } else if (format === 'excel') {
+        // Export to Excel using xlsx library
+        import('xlsx').then(XLSX => {
+          // Prepare data for Excel
+          const excelData = filteredVisits.map(visit => {
+            const visitor = visitors.find(v => v.id === visit.visitorId)
+            const duration = visit.endTime
+              ? Math.round((new Date(visit.endTime) - new Date(visit.startTime)) / (1000 * 60))
+              : 'Em andamento'
+
+            return {
+              'Data/Hora Entrada': format(new Date(visit.startTime), 'dd/MM/yyyy HH:mm'),
+              'Data/Hora Saída': visit.endTime ? format(new Date(visit.endTime), 'dd/MM/yyyy HH:mm') : '-',
+              'Visitante': visitor?.name || 'N/A',
+              'Empresa': visitor?.company || '-',
+              'Propósito': visit.purpose || '-',
+              'Status': visit.status === 'active' ? 'Ativo' : visit.status === 'completed' ? 'Finalizado' : 'Cancelado',
+              'Duração (min)': duration
+            }
+          })
+
+          // Create workbook and worksheet
+          const worksheet = XLSX.utils.json_to_sheet(excelData)
+          const workbook = XLSX.utils.book_new()
+          XLSX.utils.book_append_sheet(workbook, worksheet, 'Relatório de Visitas')
+
+          // Generate Excel file
+          XLSX.writeFile(workbook, `relatorio_visitas_${format(new Date(), 'yyyy-MM-dd')}.xlsx`)
+
+          toast.success('Relatório Excel exportado com sucesso!')
+        }).catch(error => {
+          console.error('Erro ao carregar biblioteca XLSX:', error)
+          toast.error('Erro ao exportar relatório Excel')
+        })
+      } else if (format === 'pdf') {
+        // Export to PDF using jsPDF library
+        import('jspdf').then(({ default: jsPDF }) => {
+          import('jspdf-autotable').then(({ default: autoTable }) => {
+            // Create PDF document
+            const doc = new jsPDF()
+
+            // Add title
+            doc.setFontSize(18)
+            doc.text('Relatório de Visitas', 14, 22)
+
+            // Add date
+            doc.setFontSize(11)
+            doc.text(`Gerado em: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, 14, 30)
+
+            // Add filters info if any
+            let yPos = 38
+            if (filters.dateRange !== 'all') {
+              doc.text(`Período: ${filters.dateRange === 'custom' ?
+                `${format(new Date(filters.startDate), 'dd/MM/yyyy')} a ${format(new Date(filters.endDate), 'dd/MM/yyyy')}` :
+                filters.dateRange}`, 14, yPos)
+              yPos += 8
+            }
+
+            if (filters.status !== 'all') {
+              doc.text(`Status: ${filters.status === 'active' ? 'Ativo' :
+                filters.status === 'completed' ? 'Finalizado' : 'Cancelado'}`, 14, yPos)
+              yPos += 8
+            }
+
+            if (filters.company) {
+              doc.text(`Empresa: ${filters.company}`, 14, yPos)
+              yPos += 8
+            }
+
+            // Add statistics
+            doc.setFontSize(14)
+            doc.text('Estatísticas', 14, yPos)
+            yPos += 8
+
+            doc.setFontSize(11)
+            doc.text(`Total de Visitantes: ${stats.totalVisitors}`, 14, yPos)
+            yPos += 6
+            doc.text(`Total de Visitas: ${stats.totalVisits}`, 14, yPos)
+            yPos += 6
+            doc.text(`Duração Média: ${stats.averageVisitDuration > 0 ? formatDuration(stats.averageVisitDuration) : 'N/A'}`, 14, yPos)
+            yPos += 6
+            doc.text(`Empresas Únicas: ${stats.topCompanies.length}`, 14, yPos)
+            yPos += 10
+
+            // Add table with visit data
+            const tableColumn = ['Data/Hora Entrada', 'Data/Hora Saída', 'Visitante', 'Empresa', 'Status', 'Duração']
+            const tableRows = filteredVisits.map(visit => {
+              const visitor = visitors.find(v => v.id === visit.visitorId)
+              const duration = visit.endTime
+                ? Math.round((new Date(visit.endTime) - new Date(visit.startTime)) / (1000 * 60))
+                : 'Em andamento'
+
+              return [
+                format(new Date(visit.startTime), 'dd/MM/yyyy HH:mm'),
+                visit.endTime ? format(new Date(visit.endTime), 'dd/MM/yyyy HH:mm') : '-',
+                visitor?.name || 'N/A',
+                visitor?.company || '-',
+                visit.status === 'active' ? 'Ativo' : visit.status === 'completed' ? 'Finalizado' : 'Cancelado',
+                typeof duration === 'number' ? formatDuration(duration) : duration
+              ]
+            })
+
+            autoTable(doc, {
+              head: [tableColumn],
+              body: tableRows,
+              startY: yPos,
+              theme: 'grid',
+              styles: { fontSize: 9, cellPadding: 1.5 },
+              headStyles: { fillColor: [37, 99, 235] }
+            })
+
+            // Save PDF
+            doc.save(`relatorio_visitas_${format(new Date(), 'yyyy-MM-dd')}.pdf`)
+
+            toast.success('Relatório PDF exportado com sucesso!')
+          }).catch(error => {
+            console.error('Erro ao carregar biblioteca jspdf-autotable:', error)
+            toast.error('Erro ao exportar relatório PDF')
+          })
+        }).catch(error => {
+          console.error('Erro ao carregar biblioteca jsPDF:', error)
+          toast.error('Erro ao exportar relatório PDF')
+        })
       }
     } catch (error) {
       console.error('Error exporting report:', error)
@@ -324,13 +447,29 @@ const Reports = () => {
             <RefreshCw className="h-4 w-4 mr-2" />
             Atualizar
           </button>
-          <button
-            onClick={() => exportReport('csv')}
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Exportar CSV
-          </button>
+          <div className="flex space-x-2">
+            <button
+              onClick={() => exportReport('csv')}
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Exportar CSV
+            </button>
+            <button
+              onClick={() => exportReport('excel')}
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Exportar Excel
+            </button>
+            <button
+              onClick={() => exportReport('pdf')}
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Exportar PDF
+            </button>
+          </div>
         </div>
       </div>
 
@@ -480,7 +619,7 @@ const Reports = () => {
             <BarChart3 className="h-5 w-5 text-gray-400" />
           </div>
           <div className="h-64">
-            <Bar 
+            <Bar
               data={{
                 labels: stats.visitsByDay.map(day => day.date),
                 datasets: [
@@ -509,7 +648,7 @@ const Reports = () => {
                       size: 13,
                     },
                     callbacks: {
-                      label: function(context) {
+                      label: function (context) {
                         return `Visitas: ${context.raw}`;
                       }
                     }
@@ -593,7 +732,7 @@ const Reports = () => {
                       },
                       tooltip: {
                         callbacks: {
-                          label: function(context) {
+                          label: function (context) {
                             return `${context.label}: ${context.raw} visitantes`;
                           }
                         }
@@ -673,7 +812,7 @@ const Reports = () => {
                 tooltip: {
                   backgroundColor: 'rgba(0, 0, 0, 0.8)',
                   callbacks: {
-                    label: function(context) {
+                    label: function (context) {
                       return `Visitas: ${context.raw}`;
                     }
                   }
@@ -746,10 +885,10 @@ const Reports = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredData.visits.slice(0, 10).map((visit) => {
                 const visitor = visitors.find(v => v.id === visit.visitorId)
-                const duration = visit.endTime 
+                const duration = visit.endTime
                   ? Math.round((new Date(visit.endTime) - new Date(visit.startTime)) / (1000 * 60))
                   : null
-                
+
                 return (
                   <tr key={visit.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
@@ -765,13 +904,12 @@ const Reports = () => {
                       {visit.endTime ? format(new Date(visit.endTime), 'dd/MM/yyyy HH:mm') : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        visit.status === 'active' ? 'bg-green-100 text-green-800' :
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${visit.status === 'active' ? 'bg-green-100 text-green-800' :
                         visit.status === 'completed' ? 'bg-blue-100 text-blue-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
+                          'bg-red-100 text-red-800'
+                        }`}>
                         {visit.status === 'active' ? 'Ativo' :
-                         visit.status === 'completed' ? 'Finalizado' : 'Cancelado'}
+                          visit.status === 'completed' ? 'Finalizado' : 'Cancelado'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

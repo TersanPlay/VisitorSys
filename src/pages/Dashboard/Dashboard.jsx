@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
+import { useNavigate } from 'react-router-dom'
 import {
   Users,
   UserCheck,
@@ -8,7 +9,8 @@ import {
   TrendingUp,
   Calendar,
   Building2,
-  Eye
+  Eye,
+  Settings
 } from 'lucide-react'
 import { format, startOfDay, endOfDay, subDays } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -16,6 +18,7 @@ import LoadingSpinner from '../../components/UI/LoadingSpinner'
 
 const Dashboard = () => {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [stats, setStats] = useState({
     totalVisitors: 0,
     activeVisits: 0,
@@ -33,33 +36,33 @@ const Dashboard = () => {
   const loadDashboardData = async () => {
     try {
       setLoading(true)
-      
+
       // Mock data - replace with real API calls
       await new Promise(resolve => setTimeout(resolve, 1000))
-      
+
       // Get visitors and visits from localStorage
       const visitors = JSON.parse(localStorage.getItem('visitors') || '[]')
       const visits = JSON.parse(localStorage.getItem('visits') || '[]')
-      
+
       // Calculate stats
       const today = new Date()
       const todayStart = startOfDay(today)
       const todayEnd = endOfDay(today)
-      
+
       const todayVisits = visits.filter(visit => {
         const visitDate = new Date(visit.entryTime)
         return visitDate >= todayStart && visitDate <= todayEnd
       })
-      
+
       const activeVisits = visits.filter(visit => visit.status === 'in_progress')
-      
+
       setStats({
         totalVisitors: visitors.length,
         activeVisits: activeVisits.length,
         todayVisits: todayVisits.length,
         pendingAlerts: 3 // Mock alerts
       })
-      
+
       // Get recent visits with visitor details
       const recentVisitsWithDetails = visits
         .sort((a, b) => new Date(b.entryTime) - new Date(a.entryTime))
@@ -71,7 +74,7 @@ const Dashboard = () => {
             visitor: visitor || { name: 'Visitante não encontrado' }
           }
         })
-      
+
       setRecentVisits(recentVisitsWithDetails)
     } catch (error) {
       console.error('Error loading dashboard data:', error)
@@ -93,9 +96,9 @@ const Dashboard = () => {
       'completed': { label: 'Finalizada', color: 'bg-gray-100 text-gray-800' },
       'cancelled': { label: 'Cancelada', color: 'bg-red-100 text-red-800' }
     }
-    
+
     const config = statusConfig[status] || statusConfig['completed']
-    
+
     return (
       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color}`}>
         {config.label}
@@ -316,21 +319,33 @@ const Dashboard = () => {
         </div>
         <div className="p-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <button className="flex items-center justify-center px-4 py-3 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-200">
+            <button
+              onClick={() => navigate('/visitors/register')}
+              className="flex items-center justify-center px-4 py-3 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+            >
               <UserCheck className="h-5 w-5 mr-2 text-green-600" />
               Registrar Visitante
             </button>
-            <button className="flex items-center justify-center px-4 py-3 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-200">
+            <button
+              onClick={() => navigate('/visitors/entry')}
+              className="flex items-center justify-center px-4 py-3 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+            >
               <Clock className="h-5 w-5 mr-2 text-blue-600" />
               Entrada/Saída
             </button>
-            <button className="flex items-center justify-center px-4 py-3 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-200">
+            <button
+              onClick={() => navigate('/reports')}
+              className="flex items-center justify-center px-4 py-3 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+            >
               <TrendingUp className="h-5 w-5 mr-2 text-purple-600" />
               Relatórios
             </button>
-            <button className="flex items-center justify-center px-4 py-3 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-200">
-              <Building2 className="h-5 w-5 mr-2 text-orange-600" />
-              Configurações
+            <button
+              onClick={() => navigate('/profile')}
+              className="flex items-center justify-center px-4 py-3 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+            >
+              <Settings className="h-5 w-5 mr-2 text-orange-600" />
+              Meu Perfil
             </button>
           </div>
         </div>

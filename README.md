@@ -28,10 +28,28 @@ O Sistema de Registro de Visitantes é uma aplicação web moderna desenvolvida 
   - Proteção de rotas baseada em autenticação
 
 - **Registro de Visitantes**
-  - Formulário completo para cadastro de visitantes
-  - Captura de foto via webcam
-  - Reconhecimento facial para visitantes recorrentes
-  - Validação de dados (CPF, email, telefone)
+  - Formulário completo para cadastro de visitantes com interface moderna
+  - Captura de foto via webcam com detecção automática de câmeras físicas
+  - Reconhecimento facial automático para visitantes existentes
+  - Validação de qualidade de imagem em tempo real
+  - Confirmação inteligente de visitantes recorrentes
+  - Pré-preenchimento automático de dados para visitantes reconhecidos
+  - Validação de dados (CPF, email, telefone, CNH)
+  - Campo CNH opcional com validação específica
+  - Campo "Empresa/Organização" opcional
+  - Dropdown para "Propósito da Visita" com opções predefinidas
+  - Ícones visuais para melhor identificação dos campos
+
+- **Gestão de Departamentos e Setores**
+  - Formulários modernos com ícones visuais intuitivos
+  - Dropdown padronizado para localização (Térreo, 1° Piso, 2° Piso)
+  - Seletor avançado de horário de funcionamento com:
+    - Campos separados para horário de início e fim
+    - Toggles interativos para dias da semana
+    - Validação automática de horários
+  - Conversão automática de formatos para compatibilidade com backend
+  - Campos opcionais para maior flexibilidade (telefone/ramal)
+  - Tratamento de dados legados de horários de funcionamento
 
 - **Controle de Visitas**
   - Registro de entrada e saída
@@ -72,6 +90,26 @@ O Sistema de Registro de Visitantes é uma aplicação web moderna desenvolvida 
 - **Auditoria de Logs**
   - Registro detalhado de ações no sistema
   - Relatórios de segurança
+
+### Funcionalidades de Reconhecimento Facial
+
+- **Detecção Inteligente de Câmeras**
+  - Priorização automática de câmeras físicas sobre virtuais
+  - Filtragem de câmeras virtuais (OBS, ManyCam, etc.)
+  - Configurações avançadas de qualidade de vídeo
+
+- **Reconhecimento de Visitantes Existentes**
+  - Busca automática por visitantes já cadastrados durante captura de foto
+  - Modal de confirmação com dados do visitante e porcentagem de confiança
+  - Opção de confirmar visitante existente ou proceder com novo registro
+  - Pré-preenchimento automático do formulário para visitantes reconhecidos
+  - Pulo automático para etapa de finalização quando visitante é confirmado
+
+- **Validação de Qualidade de Imagem**
+  - Análise em tempo real da qualidade da foto capturada
+  - Detecção de múltiplas faces ou ausência de face
+  - Validação de confiança mínima para reconhecimento
+  - Feedback visual durante o processo de captura
 
 ## Estrutura do Projeto
 
@@ -139,6 +177,10 @@ O Sistema de Registro de Visitantes é uma aplicação web moderna desenvolvida 
 ## Licença
 
 Este projeto está licenciado sob a licença MIT - veja o arquivo LICENSE para detalhes.
+
+## Changelog
+
+Para ver o histórico detalhado de mudanças e novas funcionalidades, consulte o [CHANGELOG.md](./CHANGELOG.md).
 
 ## Contato
 

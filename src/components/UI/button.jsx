@@ -13,13 +13,13 @@ const Button = React.forwardRef(({
   const Comp = asChild ? React.Children.only(children).type : 'button'
 
   const variantClasses = {
-    primary: 'bg-primary-600 text-white hover:bg-primary-700',
-    secondary: 'bg-secondary-100 text-secondary-900 hover:bg-secondary-200',
-    outline: 'border border-gray-300 hover:bg-gray-100',
-    ghost: 'hover:bg-gray-100 hover:text-gray-900',
-    link: 'text-primary-600 underline-offset-4 hover:underline',
-    danger: 'bg-red-600 text-white hover:bg-red-700',
-    success: 'bg-green-600 text-white hover:bg-green-700'
+    primary: 'bg-primary-600 text-white hover:bg-primary-700 dark:bg-primary-700 dark:hover:bg-primary-800',
+    secondary: 'bg-secondary-100 text-secondary-900 hover:bg-secondary-200 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600',
+    outline: 'border border-gray-300 hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-800 dark:text-gray-100',
+    ghost: 'hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-800 dark:text-gray-100 dark:hover:text-gray-50',
+    link: 'text-primary-600 underline-offset-4 hover:underline dark:text-primary-400',
+    danger: 'bg-red-600 text-white hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800',
+    success: 'bg-green-600 text-white hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800'
   }
 
   const sizeClasses = {

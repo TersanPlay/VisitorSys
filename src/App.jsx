@@ -11,6 +11,9 @@ import Sectors from './pages/Sectors'
 import SectorForm from './pages/SectorForm'
 import DepartmentList from './pages/DepartmentList'
 import DepartmentForm from './pages/DepartmentForm'
+import AuditLogs from './pages/AuditLogs'
+import TotemPage from './pages/TotemPage'
+import Profile from './pages/Profile'
 import LoadingSpinner from './components/UI/LoadingSpinner'
 
 function App() {
@@ -33,6 +36,7 @@ function App() {
             path="/login"
             element={!user ? <Login /> : <Navigate to="/dashboard" replace />}
           />
+          <Route path="/totem" element={<TotemPage />} />
 
           {/* Protected Routes */}
           <Route
@@ -52,6 +56,8 @@ function App() {
                     <Route path="/departments/add" element={<DepartmentForm />} />
                     <Route path="/departments/:id/edit" element={<DepartmentForm />} />
                     <Route path="/reports" element={<Reports />} />
+                    <Route path="/audit-logs" element={<AuditLogs />} />
+                    <Route path="/profile" element={<Profile />} />
                     <Route path="/" element={<Navigate to="/dashboard" replace />} />
                   </Routes>
                 </Layout>

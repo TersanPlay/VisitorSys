@@ -2,16 +2,16 @@ import React, { useState, useEffect } from 'react'
 import { toast } from 'react-hot-toast'
 import { departmentService } from '../services/departmentService'
 import { sectorService } from '../services/sectorService'
-import { Button } from './ui/button'
-import { Input } from './ui/input'
-import { Label } from './ui/label'
-import { Textarea } from './ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
-import { Switch } from './ui/switch'
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from './ui/card'
-import { Loader2, Save, X, Plus, Trash2 } from 'lucide-react'
-import { Badge } from './ui/badge'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog'
+import { Button } from './UI/button'
+import { Input } from './UI/input'
+import { Label } from './UI/label'
+import { Textarea } from './UI/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './UI/select'
+import { Switch } from './UI/switch'
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from './UI/card'
+import { Loader2, Save, X, Plus, Trash2, Building2, Hash, FileText, User, Briefcase, Mail, Phone, Smartphone, MapPin, Clock, Calendar, Building, Camera, Users } from 'lucide-react'
+import { Badge } from './UI/badge'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './UI/dialog'
 
 const DepartmentForm = ({ department = null, onSave, onCancel }) => {
   const isEditing = !!department
@@ -32,7 +32,11 @@ const DepartmentForm = ({ department = null, onSave, onCancel }) => {
     phone: '',
     cellphone: '',
     location: '',
-    workingHours: '',
+    workingHours: {
+      startTime: '',
+      endTime: '',
+      days: []
+    },
     status: 'active',
     observations: '',
     creationDate: '',
@@ -44,6 +48,27 @@ const DepartmentForm = ({ department = null, onSave, onCancel }) => {
   // Carregar dados do departamento se estiver editando
   useEffect(() => {
     if (isEditing && department) {
+      // Parse working hours if it's a string
+      let workingHoursData = {
+        startTime: '',
+        endTime: '',
+        days: []
+      }
+
+      if (department.workingHours && typeof department.workingHours === 'string') {
+        // Try to parse existing string format
+        const timeMatch = department.workingHours.match(/(\d{1,2}):?(\d{0,2})h?\s*às?\s*(\d{1,2}):?(\d{0,2})h?/)
+        if (timeMatch) {
+          workingHoursData.startTime = `${timeMatch[1].padStart(2, '0')}:${(timeMatch[2] || '00').padStart(2, '0')}`
+          workingHoursData.endTime = `${timeMatch[3].padStart(2, '0')}:${(timeMatch[4] || '00').padStart(2, '0')}`
+        }
+        if (department.workingHours.toLowerCase().includes('segunda')) {
+          workingHoursData.days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']
+        }
+      } else if (department.workingHours && typeof department.workingHours === 'object') {
+        workingHoursData = department.workingHours
+      }
+
       setFormData({
         name: department.name || '',
         code: department.code || '',
@@ -54,7 +79,7 @@ const DepartmentForm = ({ department = null, onSave, onCancel }) => {
         phone: department.phone || '',
         cellphone: department.cellphone || '',
         location: department.location || '',
-        workingHours: department.workingHours || '',
+        workingHours: workingHoursData,
         status: department.status || 'active',
         observations: department.observations || '',
         creationDate: department.creationDate || '',
@@ -98,6 +123,35 @@ const DepartmentForm = ({ department = null, onSave, onCancel }) => {
   const handleChange = (e) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
+  }
+
+  // Manipular mudanças no horário de funcionamento
+  const handleWorkingHoursChange = (field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      workingHours: {
+        ...prev.workingHours,
+        [field]: value
+      }
+    }))
+  }
+
+  // Manipular mudanças nos dias da semana
+  const handleDayToggle = (day) => {
+    setFormData(prev => {
+      const currentDays = prev.workingHours.days || []
+      const newDays = currentDays.includes(day)
+        ? currentDays.filter(d => d !== day)
+        : [...currentDays, day]
+
+      return {
+        ...prev,
+        workingHours: {
+          ...prev.workingHours,
+          days: newDays
+        }
+      }
+    })
   }
 
   // Manipular mudança no status (ativo/inativo)
@@ -166,17 +220,23 @@ const DepartmentForm = ({ department = null, onSave, onCancel }) => {
     try {
       let result
 
+      // Converter workingHours para string para compatibilidade com backend
+      const formDataToSend = {
+        ...formData,
+        workingHours: formatWorkingHoursForBackend(formData.workingHours)
+      }
+
       if (isEditing) {
         // Atualizar departamento existente
         result = await departmentService.updateDepartment(
           department.id,
-          formData,
+          formDataToSend,
           formData.imageFile
         )
       } else {
         // Criar novo departamento
         result = await departmentService.createDepartment(
-          formData,
+          formDataToSend,
           formData.imageFile
         )
 
@@ -198,6 +258,29 @@ const DepartmentForm = ({ department = null, onSave, onCancel }) => {
     }
   }
 
+  // Função para formatar horário de funcionamento para o backend
+  const formatWorkingHoursForBackend = (workingHours) => {
+    if (!workingHours.startTime || !workingHours.endTime || !workingHours.days?.length) {
+      return ''
+    }
+
+    const daysMap = {
+      monday: 'Segunda',
+      tuesday: 'Terça',
+      wednesday: 'Quarta',
+      thursday: 'Quinta',
+      friday: 'Sexta',
+      saturday: 'Sábado',
+      sunday: 'Domingo'
+    }
+
+    const selectedDays = workingHours.days.map(day => daysMap[day]).join(', ')
+    const startTime = workingHours.startTime.replace(':', 'h')
+    const endTime = workingHours.endTime.replace(':', 'h')
+
+    return `${selectedDays}, das ${startTime} às ${endTime}`
+  }
+
   return (
     <Card className="w-full max-w-4xl mx-auto">
       <CardHeader>
@@ -212,32 +295,43 @@ const DepartmentForm = ({ department = null, onSave, onCancel }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Nome do Departamento */}
               <div className="space-y-2">
-                <Label htmlFor="name">Nome do Departamento *</Label>
+                <Label htmlFor="name" className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4" />
+                  Nome do Departamento *
+                </Label>
                 <Input
                   id="name"
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
                   required
+                  className="pl-10"
                 />
               </div>
 
               {/* Sigla/Código */}
               <div className="space-y-2">
-                <Label htmlFor="code">Sigla/Código</Label>
+                <Label htmlFor="code" className="flex items-center gap-2">
+                  <Hash className="h-4 w-4" />
+                  Sigla/Código
+                </Label>
                 <Input
                   id="code"
                   name="code"
                   value={formData.code}
                   onChange={handleChange}
                   placeholder="Ex: DRH, DJUR"
+                  className="pl-10"
                 />
               </div>
             </div>
 
             {/* Descrição/Finalidade */}
             <div className="space-y-2">
-              <Label htmlFor="description">Descrição/Finalidade *</Label>
+              <Label htmlFor="description" className="flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Descrição/Finalidade *
+              </Label>
               <Textarea
                 id="description"
                 name="description"
@@ -245,6 +339,7 @@ const DepartmentForm = ({ department = null, onSave, onCancel }) => {
                 onChange={handleChange}
                 rows={3}
                 required
+                className="pl-10"
               />
             </div>
           </div>
@@ -256,19 +351,26 @@ const DepartmentForm = ({ department = null, onSave, onCancel }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Nome do Responsável */}
               <div className="space-y-2">
-                <Label htmlFor="responsibleName">Nome do Responsável *</Label>
+                <Label htmlFor="responsibleName" className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  Nome do Responsável *
+                </Label>
                 <Input
                   id="responsibleName"
                   name="responsibleName"
                   value={formData.responsibleName}
                   onChange={handleChange}
                   required
+                  className="pl-10"
                 />
               </div>
 
               {/* Cargo do Responsável */}
               <div className="space-y-2">
-                <Label htmlFor="responsiblePosition">Cargo do Responsável *</Label>
+                <Label htmlFor="responsiblePosition" className="flex items-center gap-2">
+                  <Briefcase className="h-4 w-4" />
+                  Cargo do Responsável *
+                </Label>
                 <Input
                   id="responsiblePosition"
                   name="responsiblePosition"
@@ -276,6 +378,7 @@ const DepartmentForm = ({ department = null, onSave, onCancel }) => {
                   onChange={handleChange}
                   placeholder="Ex: Diretor, Coordenador"
                   required
+                  className="pl-10"
                 />
               </div>
             </div>
@@ -283,7 +386,10 @@ const DepartmentForm = ({ department = null, onSave, onCancel }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* E-mail do Responsável */}
               <div className="space-y-2">
-                <Label htmlFor="responsibleEmail">E-mail do Responsável *</Label>
+                <Label htmlFor="responsibleEmail" className="flex items-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  E-mail do Responsável *
+                </Label>
                 <Input
                   id="responsibleEmail"
                   name="responsibleEmail"
@@ -291,31 +397,40 @@ const DepartmentForm = ({ department = null, onSave, onCancel }) => {
                   value={formData.responsibleEmail}
                   onChange={handleChange}
                   required
+                  className="pl-10"
                 />
               </div>
 
               {/* Telefone */}
               <div className="space-y-2">
-                <Label htmlFor="phone">Telefone/Ramal</Label>
+                <Label htmlFor="phone" className="flex items-center gap-2">
+                  <Phone className="h-4 w-4" />
+                  Telefone/Ramal
+                </Label>
                 <Input
                   id="phone"
                   name="phone"
                   value={formData.phone}
                   onChange={handleChange}
                   placeholder="Ex: (00) 0000-0000"
+                  className="pl-10"
                 />
               </div>
             </div>
 
             {/* Celular */}
             <div className="space-y-2">
-              <Label htmlFor="cellphone">Celular Funcional</Label>
+              <Label htmlFor="cellphone" className="flex items-center gap-2">
+                <Smartphone className="h-4 w-4" />
+                Celular Funcional
+              </Label>
               <Input
                 id="cellphone"
                 name="cellphone"
                 value={formData.cellphone}
                 onChange={handleChange}
                 placeholder="Ex: (00) 00000-0000"
+                className="pl-10"
               />
             </div>
           </div>
@@ -326,27 +441,82 @@ const DepartmentForm = ({ department = null, onSave, onCancel }) => {
 
             {/* Localização */}
             <div className="space-y-2">
-              <Label htmlFor="location">Localização *</Label>
-              <Input
-                id="location"
-                name="location"
+              <Label htmlFor="location" className="flex items-center gap-2">
+                <MapPin className="h-4 w-4" />
+                Localização *
+              </Label>
+              <Select
                 value={formData.location}
-                onChange={handleChange}
-                placeholder="Ex: Bloco A, 2º andar, Sala 201"
-                required
-              />
+                onValueChange={(value) => setFormData(prev => ({ ...prev, location: value }))}
+              >
+                <SelectTrigger className="pl-10">
+                  <SelectValue placeholder="Selecione a localização" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Térreo">Térreo</SelectItem>
+                  <SelectItem value="1° Piso">1° Piso</SelectItem>
+                  <SelectItem value="2° Piso">2° Piso</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Horário de Funcionamento */}
-            <div className="space-y-2">
-              <Label htmlFor="workingHours">Horário de Funcionamento</Label>
-              <Input
-                id="workingHours"
-                name="workingHours"
-                value={formData.workingHours}
-                onChange={handleChange}
-                placeholder="Ex: Segunda a sexta, das 8h às 14h"
-              />
+            <div className="space-y-4">
+              <Label className="flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                Horário de Funcionamento
+              </Label>
+
+              {/* Seletor de horários */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="startTime" className="text-sm">Horário de Início</Label>
+                  <Input
+                    id="startTime"
+                    type="time"
+                    value={formData.workingHours.startTime}
+                    onChange={(e) => handleWorkingHoursChange('startTime', e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="endTime" className="text-sm">Horário de Término</Label>
+                  <Input
+                    id="endTime"
+                    type="time"
+                    value={formData.workingHours.endTime}
+                    onChange={(e) => handleWorkingHoursChange('endTime', e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+
+              {/* Seletor de dias da semana */}
+              <div className="space-y-2">
+                <Label className="text-sm">Dias de Funcionamento</Label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { key: 'monday', label: 'Seg' },
+                    { key: 'tuesday', label: 'Ter' },
+                    { key: 'wednesday', label: 'Qua' },
+                    { key: 'thursday', label: 'Qui' },
+                    { key: 'friday', label: 'Sex' },
+                    { key: 'saturday', label: 'Sáb' },
+                    { key: 'sunday', label: 'Dom' }
+                  ].map(day => (
+                    <Button
+                      key={day.key}
+                      type="button"
+                      variant={formData.workingHours.days?.includes(day.key) ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handleDayToggle(day.key)}
+                      className="min-w-[50px]"
+                    >
+                      {day.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -370,32 +540,43 @@ const DepartmentForm = ({ department = null, onSave, onCancel }) => {
 
               {/* Data de Criação */}
               <div className="space-y-2">
-                <Label htmlFor="creationDate">Data de Criação</Label>
+                <Label htmlFor="creationDate" className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  Data de Criação
+                </Label>
                 <Input
                   id="creationDate"
                   name="creationDate"
                   type="date"
                   value={formData.creationDate}
                   onChange={handleChange}
+                  className="pl-10"
                 />
               </div>
             </div>
 
             {/* Departamento Superior */}
             <div className="space-y-2">
-              <Label htmlFor="parentDepartment">Vínculo com Departamento Superior</Label>
+              <Label htmlFor="parentDepartment" className="flex items-center gap-2">
+                <Building className="h-4 w-4" />
+                Vínculo com Departamento Superior
+              </Label>
               <Input
                 id="parentDepartment"
                 name="parentDepartment"
                 value={formData.parentDepartment}
                 onChange={handleChange}
                 placeholder="Ex: Secretaria de Administração"
+                className="pl-10"
               />
             </div>
 
             {/* Observações */}
             <div className="space-y-2">
-              <Label htmlFor="observations">Observações</Label>
+              <Label htmlFor="observations" className="flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Observações
+              </Label>
               <Textarea
                 id="observations"
                 name="observations"
@@ -403,18 +584,23 @@ const DepartmentForm = ({ department = null, onSave, onCancel }) => {
                 onChange={handleChange}
                 rows={3}
                 placeholder="Informações adicionais sobre o departamento"
+                className="pl-10"
               />
             </div>
 
             {/* Imagem/Brasão */}
             <div className="space-y-2">
-              <Label htmlFor="imageFile">Imagem/Brasão</Label>
+              <Label htmlFor="imageFile" className="flex items-center gap-2">
+                <Camera className="h-4 w-4" />
+                Imagem/Brasão
+              </Label>
               <Input
                 id="imageFile"
                 name="imageFile"
                 type="file"
                 accept="image/*"
                 onChange={handleImageChange}
+                className="pl-10"
               />
               {formData.imagePreview && (
                 <div className="mt-2">
@@ -431,7 +617,10 @@ const DepartmentForm = ({ department = null, onSave, onCancel }) => {
           {/* Seção de setores vinculados */}
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <h3 className="text-lg font-medium">Setores Vinculados</h3>
+              <h3 className="text-lg font-medium flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Setores Vinculados
+              </h3>
               <Button
                 type="button"
                 variant="outline"

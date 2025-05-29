@@ -10,7 +10,9 @@ import {
   Settings,
   Shield,
   Monitor,
-  Building2
+  Building2,
+  FileText,
+  Activity
 } from 'lucide-react'
 
 const Sidebar = ({ onNavigate }) => {
@@ -153,6 +155,14 @@ const Sidebar = ({ onNavigate }) => {
               <Shield className="mr-2 h-4 w-4" />
               Administração
             </div>
+            <NavLink
+              to="/audit-logs"
+              onClick={onNavigate}
+              className="group flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200"
+            >
+              <Activity className="mr-3 h-5 w-5 text-gray-400 dark:text-gray-500 group-hover:text-gray-500 dark:group-hover:text-gray-400" />
+              Logs de Auditoria
+            </NavLink>
             <NavLink
               to="/totem"
               target="_blank"

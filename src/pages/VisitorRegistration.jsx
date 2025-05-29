@@ -17,7 +17,8 @@ import {
   AlertCircle,
   RefreshCw,
   Eye,
-  EyeOff
+  EyeOff,
+  CreditCard
 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
@@ -37,6 +38,7 @@ const VisitorRegistration = () => {
     phone: '',
     cpf: '',
     rg: '',
+    cnh: '',
     company: '',
     purpose: '',
     notes: ''
@@ -86,6 +88,10 @@ const VisitorRegistration = () => {
       newErrors.cpf = 'CPF inválido'
     }
 
+    if (formData.cnh && !validateCNH(formData.cnh)) {
+      newErrors.cnh = 'CNH inválida'
+    }
+
     if (!formData.purpose.trim()) {
       newErrors.purpose = 'Propósito da visita é obrigatório'
     }
@@ -125,12 +131,50 @@ const VisitorRegistration = () => {
     return true
   }
 
+  const validateCNH = (cnh) => {
+    const cleanCnh = cnh.replace(/\D/g, '')
+    if (cleanCnh.length !== 11) return false
+
+    // Check for known invalid patterns
+    if (/^(\d)\1{10}$/.test(cleanCnh)) return false
+
+    // CNH validation algorithm
+    let sum = 0
+    let seq = 0
+    for (let i = 0; i < 9; i++) {
+      sum += parseInt(cleanCnh.charAt(i)) * (9 - i)
+    }
+    let dv1 = sum % 11
+    if (dv1 >= 10) {
+      dv1 = 0
+      seq = 1
+    }
+
+    sum = 0
+    for (let i = 0; i < 9; i++) {
+      sum += parseInt(cleanCnh.charAt(i)) * (1 + i)
+    }
+    let dv2 = sum % 11
+    if (dv2 >= 10) {
+      dv2 = 0
+    } else if (dv2 < 2) {
+      dv2 = 0
+    }
+
+    return (parseInt(cleanCnh.charAt(9)) === dv1 && parseInt(cleanCnh.charAt(10)) === dv2)
+  }
+
   const formatCPF = (value) => {
     const cleanValue = value.replace(/\D/g, '')
     return cleanValue
       .replace(/(\d{3})(\d)/, '$1.$2')
       .replace(/(\d{3})(\d)/, '$1.$2')
       .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
+  }
+
+  const formatCNH = (value) => {
+    const cleanValue = value.replace(/\D/g, '')
+    return cleanValue.replace(/(\d{11})/, '$1')
   }
 
   const formatPhone = (value) => {
@@ -152,6 +196,8 @@ const VisitorRegistration = () => {
 
     if (name === 'cpf') {
       formattedValue = formatCPF(value)
+    } else if (name === 'cnh') {
+      formattedValue = formatCNH(value)
     } else if (name === 'phone') {
       formattedValue = formatPhone(value)
     }
@@ -269,6 +315,7 @@ const VisitorRegistration = () => {
       phone: '',
       cpf: '',
       rg: '',
+      cnh: '',
       company: '',
       purpose: '',
       notes: ''
@@ -426,7 +473,7 @@ const VisitorRegistration = () => {
                       name="name"
                       value={formData.name}
                       onChange={handleChange}
-                      className={`block w-full pl-10 pr-3 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-1 sm:text-sm ${errors.name
+                      className={`block w-full pl-10 pr-3 py-4 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-1 text-lg min-h-[50px] ${errors.name
                         ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
                         : 'border-gray-300 focus:ring-primary-500 focus:border-primary-500'
                         }`}
@@ -453,7 +500,7 @@ const VisitorRegistration = () => {
                       name="email"
                       value={formData.email}
                       onChange={handleChange}
-                      className={`block w-full pl-10 pr-3 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-1 sm:text-sm ${errors.email
+                      className={`block w-full pl-10 pr-3 py-4 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-1 text-lg min-h-[50px] ${errors.email
                         ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
                         : 'border-gray-300 focus:ring-primary-500 focus:border-primary-500'
                         }`}
@@ -480,7 +527,7 @@ const VisitorRegistration = () => {
                       name="phone"
                       value={formData.phone}
                       onChange={handleChange}
-                      className={`block w-full pl-10 pr-3 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-1 sm:text-sm ${errors.phone
+                      className={`block w-full pl-10 pr-3 py-4 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-1 text-lg min-h-[50px] ${errors.phone
                         ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
                         : 'border-gray-300 focus:ring-primary-500 focus:border-primary-500'
                         }`}
@@ -505,7 +552,7 @@ const VisitorRegistration = () => {
                       value={formData.cpf}
                       onChange={handleChange}
                       maxLength={14}
-                      className={`block w-full pl-3 pr-10 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-1 sm:text-sm ${errors.cpf
+                      className={`block w-full pl-3 pr-10 py-4 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-1 text-lg min-h-[50px] ${errors.cpf
                         ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
                         : 'border-gray-300 focus:ring-primary-500 focus:border-primary-500'
                         }`}
@@ -540,7 +587,7 @@ const VisitorRegistration = () => {
                       name="rg"
                       value={formData.rg}
                       onChange={handleChange}
-                      className="block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                      className="block w-full pl-3 pr-10 py-4 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 text-lg min-h-[50px]"
                       placeholder="00.000.000-0"
                     />
                     <button
@@ -557,10 +604,38 @@ const VisitorRegistration = () => {
                   </div>
                 </div>
 
+                {/* CNH */}
+                <div>
+                  <label htmlFor="cnh" className="block text-sm font-medium text-gray-700">
+                    CNH (opcional)
+                  </label>
+                  <div className="mt-1 relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <CreditCard className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      type="text"
+                      id="cnh"
+                      name="cnh"
+                      value={formData.cnh}
+                      onChange={handleChange}
+                      maxLength={11}
+                      className={`block w-full pl-10 pr-3 py-4 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-1 text-lg min-h-[50px] ${errors.cnh
+                          ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
+                          : 'border-gray-300 focus:ring-primary-500 focus:border-primary-500'
+                        }`}
+                      placeholder="00000000000"
+                    />
+                  </div>
+                  {errors.cnh && (
+                    <p className="mt-1 text-sm text-red-600">{errors.cnh}</p>
+                  )}
+                </div>
+
                 {/* Company */}
                 <div className="md:col-span-2">
                   <label htmlFor="company" className="block text-sm font-medium text-gray-700">
-                    Empresa/Organização
+                    Empresa/Organização (opcional)
                   </label>
                   <div className="mt-1 relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -572,7 +647,7 @@ const VisitorRegistration = () => {
                       name="company"
                       value={formData.company}
                       onChange={handleChange}
-                      className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                      className="block w-full pl-10 pr-3 py-4 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 text-lg min-h-[50px]"
                       placeholder="Nome da empresa ou organização"
                     />
                   </div>
@@ -584,20 +659,46 @@ const VisitorRegistration = () => {
                     Propósito da Visita *
                   </label>
                   <div className="mt-1 relative">
-                    <div className="absolute top-3 left-3 pointer-events-none">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <FileText className="h-5 w-5 text-gray-400" />
                     </div>
-                    <textarea
+                    <select
                       id="purpose"
                       name="purpose"
-                      rows={3}
                       value={formData.purpose}
                       onChange={handleChange}
-                      className={`block w-full pl-10 pr-3 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-1 sm:text-sm ${errors.purpose
+                      className={`block w-full pl-10 pr-3 py-4 border rounded-md shadow-sm focus:outline-none focus:ring-1 text-lg min-h-[50px] ${errors.purpose
                         ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
                         : 'border-gray-300 focus:ring-primary-500 focus:border-primary-500'
                         }`}
-                      placeholder="Descreva o motivo da visita..."
+                    >
+                      <option value="">Selecione o propósito da visita</option>
+                      <option value="Solicitar informações públicas (transparência e acesso à informação)">Solicitar informações públicas (transparência e acesso à informação)</option>
+                      <option value="Protocolar documentos (requerimentos, ofícios, sugestões, denúncias)">Protocolar documentos (requerimentos, ofícios, sugestões, denúncias)</option>
+                      <option value="Participar de audiências públicas">Participar de audiências públicas</option>
+                      <option value="Consultar documentos oficiais (leis, atas, projetos, contratos, etc.)">Consultar documentos oficiais (leis, atas, projetos, contratos, etc.)</option>
+                      <option value="Buscar orientação sobre serviços legislativos">Buscar orientação sobre serviços legislativos</option>
+                      <option value="Participar de visitas guiadas ou eventos educativos">Participar de visitas guiadas ou eventos educativos</option>
+                      <option value="Falar com vereadores (agendamento ou atendimento direto)">Falar com vereadores (agendamento ou atendimento direto)</option>
+                      <option value="Utilizar a biblioteca legislativa ou arquivo histórico">Utilizar a biblioteca legislativa ou arquivo histórico</option>
+                      <option value="Participar de reuniões de comissões temáticas">Participar de reuniões de comissões temáticas</option>
+                      <option value="Reivindicar melhorias para o bairro ou comunidade">Reivindicar melhorias para o bairro ou comunidade</option>
+                      <option value="Trabalhar (servidores públicos, estagiários, terceirizados)">Trabalhar (servidores públicos, estagiários, terceirizados)</option>
+                      <option value="Realizar cobertura jornalística ou acadêmica">Realizar cobertura jornalística ou acadêmica</option>
+                      <option value="Participar de solenidades e homenagens">Participar de solenidades e homenagens</option>
+                      <option value="Conversar com um vereador (agendar reunião ou atendimento direto)">Conversar com um vereador (agendar reunião ou atendimento direto)</option>
+                      <option value="Entregar demandas da comunidade (reivindicações, abaixo-assinados, denúncias)">Entregar demandas da comunidade (reivindicações, abaixo-assinados, denúncias)</option>
+                      <option value="Solicitar apoio">Solicitar apoio</option>
+                      <option value="Participar de encontros com vereadores em eventos públicos internos">Participar de encontros com vereadores em eventos públicos internos</option>
+                      <option value="Registrar denúncias sobre omissão ou conduta de vereadores">Registrar denúncias sobre omissão ou conduta de vereadores</option>
+                      <option value="Entregar convites oficiais ou comunicados da comunidade">Entregar convites oficiais ou comunicados da comunidade</option>
+                      <option value="Solicitar homenagens, moções ou títulos honoríficos">Solicitar homenagens, moções ou títulos honoríficos</option>
+                      <option value="Apresentar projetos sociais ou culturais ao gabinete de um vereador">Apresentar projetos sociais ou culturais ao gabinete de um vereador</option>
+                      <option value="Reivindicar melhorias para bairros, escolas, ruas, saúde, transporte etc.">Reivindicar melhorias para bairros, escolas, ruas, saúde, transporte etc.</option>
+                      <option value="Buscar apoio político para iniciativas comunitárias ou associações">Buscar apoio político para iniciativas comunitárias ou associações</option>
+                      <option value="Discutir pautas relacionadas ao orçamento municipal com vereadores">Discutir pautas relacionadas ao orçamento municipal com vereadores</option>
+                      <option value="Participar de reuniões organizadas por gabinetes parlamentares">Participar de reuniões organizadas por gabinetes parlamentares</option>
+                    </select>
                     />
                   </div>
                   {errors.purpose && (
@@ -614,10 +715,10 @@ const VisitorRegistration = () => {
                     <textarea
                       id="notes"
                       name="notes"
-                      rows={2}
+                      rows={3}
                       value={formData.notes}
                       onChange={handleChange}
-                      className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                      className="block w-full px-3 py-4 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 text-lg min-h-[80px]"
                       placeholder="Informações adicionais (opcional)..."
                     />
                   </div>

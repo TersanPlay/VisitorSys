@@ -1,0 +1,1555 @@
+import React, { useState, useRef, useEffect } from 'react'
+import { useAuth } from '../contexts/AuthContext'
+import { visitorService } from '../services/visitorService'
+import { faceRecognitionService } from '../services/faceRecognitionService'
+import { cameraService } from '../services/cameraService'
+import { sectorService } from '../services/sectorService'
+import { departmentService } from '../services/departmentService'
+import LoadingSpinner from '../components/LoadingSpinner'
+import PageTitle from '../components/PageTitle'
+import { useNavigate } from 'react-router-dom'
+
+const VisitorRegistration = () => {
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  const webcamRef = useRef(null)
+  const [loading, setLoading] = useState(false)
+  const [faceLoading, setFaceLoading] = useState(false)
+  const [showCamera, setShowCamera] = useState(false)
+  const [cameraLoading, setCameraLoading] = useState(false)
+  const [capturedImage, setCapturedImage] = useState(null)
+  const [faceDetected, setFaceDetected] = useState(false)
+  const [cameraReady, setCameraReady] = useState(false)
+  const [cameraPermissions, setCameraPermissions] = useState(null)
+  const [selectedCameraId, setSelectedCameraId] = useState(null)
+  const [photoError, setPhotoError] = useState(null)
+  const [isCapturing, setIsCapturing] = useState(false)
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    cpf: '',
+    rg: '',
+    cnh: '',
+    company: '',
+    purpose: '',
+    notes: '',
+    sectors: [],      // Array para múltiplos setores
+    departments: []   // Array para múltiplos departamentos
+  })
+  const [errors, setErrors] = useState({})
+  const [showCpf, setShowCpf] = useState(false)
+  const [showRg, setShowRg] = useState(false)
+  const [availableSectors, setAvailableSectors] = useState([])
+  const [availableDepartments, setAvailableDepartments] = useState([])
+
+  const initializeFaceRecognition = async () => {
+    try {
+      console.log('Inicializando serviço de reconhecimento facial...')
+      await faceRecognitionService.initialize()
+      console.log('Serviço de reconhecimento facial inicializado com sucesso')
+    } catch (error) {
+      console.error('Error initializing face recognition:', error)
+      toast.error('Erro ao inicializar reconhecimento facial')
+    }
+  }
+
+  // Inicializar serviços quando o componente montar
+  useEffect(() => {
+    console.log('Componente VisitorRegistration montado, inicializando serviços...')
+    initializeFaceRecognition()
+    loadSectors()
+    loadDepartments()
+
+    // Cleanup quando o componente desmontar
+    return () => {
+      console.log('Componente VisitorRegistration desmontado, limpando recursos...')
+      // Parar qualquer stream de câmera ativo
+      if (webcamRef.current && webcamRef.current.stream) {
+        console.log('Parando stream de câmera...')
+        webcamRef.current.stream.getTracks().forEach(track => track.stop())
+      }
+    }
+  }, [])
+
+  // Carregar setores disponíveis
+  const loadSectors = async () => {
+    try {
+      const sectors = await sectorService.getAllSectors()
+      setAvailableSectors(sectors)
+    } catch (error) {
+      console.error('Erro ao carregar setores:', error)
+      toast.error('Erro ao carregar setores')
+    }
+  }
+
+  // Carregar departamentos disponíveis
+  const loadDepartments = async () => {
+    try {
+      const departments = await departmentService.getAllDepartments()
+      setAvailableDepartments(departments)
+    } catch (error) {
+      console.error('Erro ao carregar departamentos:', error)
+      toast.error('Erro ao carregar departamentos')
+    }
+  }
+
+  // Inicializar câmeras
+  const initializeCameras = async () => {
+    try {
+      console.log('Inicializando câmeras...')
+
+      // Check if browser supports camera access
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Seu navegador não suporta acesso à câmera')
+      }
+
+      // Get system info
+      const systemInfo = cameraService.getSystemInfo()
+      console.log('Informações do sistema:', systemInfo)
+
+      if (!systemInfo.hasMediaDevices || !systemInfo.hasGetUserMedia) {
+        throw new Error('Seu navegador não suporta acesso à câmera. Use um navegador mais recente.')
+      }
+
+      // Request camera permissions first
+      console.log('Solicitando permissões de câmera...')
+      const permissionResult = await cameraService.requestPermission()
+
+      if (!permissionResult) {
+        throw new Error('Permissão para acessar a câmera foi negada')
+      }
+
+      setCameraPermissions('granted')
+      console.log('Permissões de câmera concedidas')
+
+      // Enumerate cameras
+      const cameras = await cameraService.enumerateDevices()
+      console.log('Câmeras encontradas:', cameras.length)
+
+      if (cameras.length === 0) {
+        throw new Error('Nenhuma câmera encontrada no dispositivo')
+      }
+
+      // Separar câmeras físicas e virtuais
+      const physicalCameras = cameras.filter(camera => !camera.isVirtual)
+      const virtualCameras = cameras.filter(camera => camera.isVirtual)
+
+      console.log('Câmeras físicas encontradas:', physicalCameras.length)
+      console.log('Câmeras virtuais encontradas:', virtualCameras.length)
+
+      // Lista de câmeras para testar, priorizando câmeras físicas
+      const camerasToTest = [...physicalCameras, ...virtualCameras]
+
+      // Selecionar a primeira câmera como fallback
+      let selectedCamera = cameras[0]
+      let cameraFound = false
+
+      // Testar câmeras até encontrar uma que funcione
+      for (const camera of camerasToTest) {
+        // Testar se a câmera funciona
+        console.log(`Testando câmera: ${camera.label || camera.deviceId} (${camera.isVirtual ? 'Virtual' : 'Física'})`)
+        const testResult = await cameraService.testCamera(camera.deviceId)
+
+        if (testResult.working) {
+          console.log(`Câmera funcionando: ${camera.label || camera.deviceId}`)
+          selectedCamera = camera
+          cameraFound = true
+
+          // Se encontramos uma câmera física funcionando, usamos ela
+          if (!camera.isVirtual) {
+            console.log('Câmera física encontrada, usando-a')
+            break
+          }
+
+          // Se é uma câmera virtual, continuamos procurando por uma física
+          // mas guardamos esta como fallback
+          console.log('Câmera virtual encontrada, continuando busca por câmera física...')
+        } else {
+          console.log(`Câmera não funcionando: ${camera.label || camera.deviceId}`, testResult.error)
+        }
+      }
+
+      if (!cameraFound) {
+        console.warn('Nenhuma câmera funcionando encontrada')
+        toast.warning('Nenhuma câmera funcionando foi encontrada. Verifique suas conexões.')
+      }
+
+      console.log('Câmera selecionada:', selectedCamera)
+      if (selectedCamera.isVirtual) {
+        toast.warning('Usando câmera virtual. Para melhor experiência, conecte uma câmera física.')
+      }
+
+      setSelectedCameraId(selectedCamera.deviceId)
+      return true
+
+    } catch (error) {
+      console.error('Erro na inicialização das câmeras:', error)
+      setCameraPermissions('denied')
+      setCameraReady(false)
+      toast.error('Erro ao acessar câmera: ' + error.message)
+      return false
+    }
+  }
+
+  // Função para mostrar a câmera
+  const handleShowCamera = async () => {
+    console.log('Abrindo câmera...')
+    setCameraLoading(true)
+    setCameraReady(false)
+
+    try {
+      // Initialize cameras if not done yet
+      if (cameraPermissions === null) {
+        console.log('Permissões de câmera não verificadas, inicializando câmeras...')
+        const success = await initializeCameras()
+
+        if (!success) {
+          console.error('Falha na inicialização das câmeras')
+          setCameraLoading(false)
+          return
+        }
+      } else if (cameraPermissions === 'denied') {
+        console.log('Permissões de câmera negadas anteriormente, tentando novamente...')
+        const success = await initializeCameras()
+
+        if (!success) {
+          console.error('Permissões de câmera negadas novamente')
+          setCameraLoading(false)
+          return
+        }
+      }
+
+      // Se chegou aqui, podemos mostrar a câmera
+      console.log('Permissões concedidas, mostrando câmera...')
+      setShowCamera(true)
+
+      // O loading será removido quando onUserMedia for chamado
+      // Se após 10 segundos o onUserMedia não for chamado, removemos o loading
+      setTimeout(() => {
+        if (cameraLoading) {
+          console.warn('Timeout na ativação da câmera')
+          setCameraLoading(false)
+          if (!cameraReady) {
+            toast.error('Timeout na ativação da câmera. Tente novamente.')
+          }
+        }
+      }, 10000)
+
+    } catch (error) {
+      console.error('Erro ao abrir câmera:', error)
+      setCameraLoading(false)
+      toast.error('Erro ao abrir câmera: ' + error.message)
+    }
+  }
+
+  const validateForm = () => {
+    const newErrors = {}
+
+    if (!formData.name.trim()) {
+      newErrors.name = 'Nome é obrigatório'
+    }
+
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = 'Email inválido'
+    }
+
+    if (formData.phone && !/^\(?\d{2}\)?[\s-]?\d{4,5}[\s-]?\d{4}$/.test(formData.phone)) {
+      newErrors.phone = 'Telefone inválido'
+    }
+
+    if (formData.cpf && !validateCPF(formData.cpf)) {
+      newErrors.cpf = 'CPF inválido'
+    }
+
+    if (formData.cnh && !validateCNH(formData.cnh)) {
+      newErrors.cnh = 'CNH inválida'
+    }
+
+    if (!formData.purpose.trim()) {
+      newErrors.purpose = 'Propósito da visita é obrigatório'
+    }
+
+    // Company é opcional agora
+
+    if (formData.sectors.length === 0) {
+      newErrors.sectors = 'Selecione pelo menos um setor'
+    }
+
+    if (formData.departments.length === 0) {
+      newErrors.departments = 'Selecione pelo menos um departamento'
+    }
+
+    if (!capturedImage) {
+      newErrors.photo = 'Foto é obrigatória'
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const validateCPF = (cpf) => {
+    const cleanCpf = cpf.replace(/\D/g, '')
+    if (cleanCpf.length !== 11) return false
+
+    // Check for known invalid patterns
+    if (/^(\d)\1{10}$/.test(cleanCpf)) return false
+
+    // Validate check digits
+    let sum = 0
+    for (let i = 0; i < 9; i++) {
+      sum += parseInt(cleanCpf.charAt(i)) * (10 - i)
+    }
+    let checkDigit = 11 - (sum % 11)
+    if (checkDigit === 10 || checkDigit === 11) checkDigit = 0
+    if (checkDigit !== parseInt(cleanCpf.charAt(9))) return false
+
+    sum = 0
+    for (let i = 0; i < 10; i++) {
+      sum += parseInt(cleanCpf.charAt(i)) * (11 - i)
+    }
+    checkDigit = 11 - (sum % 11)
+    if (checkDigit === 10 || checkDigit === 11) checkDigit = 0
+    if (checkDigit !== parseInt(cleanCpf.charAt(10))) return false
+
+    return true
+  }
+
+  const validateCNH = (cnh) => {
+    const cleanCnh = cnh.replace(/\D/g, '')
+    if (cleanCnh.length !== 11) return false
+
+    // Check for known invalid patterns
+    if (/^(\d)\1{10}$/.test(cleanCnh)) return false
+
+    // CNH validation algorithm
+    let sum = 0
+    let seq = 0
+    for (let i = 0; i < 9; i++) {
+      sum += parseInt(cleanCnh.charAt(i)) * (9 - i)
+    }
+    let dv1 = sum % 11
+    if (dv1 >= 10) {
+      dv1 = 0
+      seq = 1
+    }
+
+    sum = 0
+    for (let i = 0; i < 9; i++) {
+      sum += parseInt(cleanCnh.charAt(i)) * (1 + i)
+    }
+    let dv2 = sum % 11
+    if (dv2 >= 10) {
+      dv2 = 0
+    } else if (dv2 < 2) {
+      dv2 = 0
+    }
+
+    return (parseInt(cleanCnh.charAt(9)) === dv1 && parseInt(cleanCnh.charAt(10)) === dv2)
+  }
+
+  const formatCPF = (value) => {
+    const cleanValue = value.replace(/\D/g, '')
+    return cleanValue
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
+  }
+
+  const formatCNH = (value) => {
+    const cleanValue = value.replace(/\D/g, '')
+    return cleanValue.replace(/(\d{11})/, '$1')
+  }
+
+  const formatPhone = (value) => {
+    const cleanValue = value.replace(/\D/g, '')
+    if (cleanValue.length <= 10) {
+      return cleanValue
+        .replace(/(\d{2})(\d)/, '($1) $2')
+        .replace(/(\d{4})(\d)/, '$1-$2')
+    } else {
+      return cleanValue
+        .replace(/(\d{2})(\d)/, '($1) $2')
+        .replace(/(\d{5})(\d)/, '$1-$2')
+    }
+  }
+
+  const handleChange = (e) => {
+    const { name, value } = e.target
+    let formattedValue = value
+
+    if (name === 'cpf') {
+      formattedValue = formatCPF(value)
+    } else if (name === 'cnh') {
+      formattedValue = formatCNH(value)
+    } else if (name === 'phone') {
+      formattedValue = formatPhone(value)
+    } else if (name === 'sectors' || name === 'departments') {
+      // Para campos de seleção múltipla
+      const selectedOptions = Array.from(e.target.selectedOptions).map(option => option.value)
+
+      // Limitar a 3 seleções
+      const limitedSelections = selectedOptions.slice(0, 3)
+
+      setFormData(prev => ({
+        ...prev,
+        [name]: limitedSelections
+      }))
+
+      // Clear error when user starts typing
+      if (errors[name]) {
+        setErrors(prev => ({
+          ...prev,
+          [name]: ''
+        }))
+      }
+
+      return // Retornar para evitar a execução do código abaixo
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      [name]: formattedValue
+    }))
+
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }))
+    }
+  }
+
+  // Função para verificar se uma imagem está vazia ou preta
+  const isImageEmptyOrBlack = (dataUrl) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        // Criar um canvas para analisar a imagem
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+
+        // Verificar se a imagem não é completamente preta ou branca
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+
+        let hasContent = false;
+        // Analisar apenas uma amostra de pixels para melhor performance
+        const sampleSize = Math.floor(data.length / 100);
+        for (let i = 0; i < data.length; i += sampleSize) {
+          // Se encontrarmos algum pixel que não seja preto (0,0,0) ou branco (255,255,255)
+          if ((data[i] > 10 && data[i] < 245) ||
+            (data[i + 1] > 10 && data[i + 1] < 245) ||
+            (data[i + 2] > 10 && data[i + 2] < 245)) {
+            hasContent = true;
+            break;
+          }
+        }
+
+        resolve(!hasContent);
+      };
+      img.onerror = () => resolve(true); // Considerar erro como imagem vazia
+      img.src = dataUrl;
+    });
+  };
+
+  // Função para converter dataURL para File
+  const dataURLtoFile = (dataUrl, filename) => {
+    const arr = dataUrl.split(',');
+    const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], filename, { type: mime });
+  };
+
+  // Função para criar elemento de imagem a partir de dataURL
+  const createImageElement = (dataUrl) => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = (error) => reject(error);
+      img.src = dataUrl;
+    });
+  };
+
+  const capturePhoto = async () => {
+    try {
+      setIsCapturing(true);
+      setPhotoError(null);
+
+      // Verificar se o webcamRef está disponível e tem vídeo ativo
+      if (!webcamRef.current || !webcamRef.current.video) {
+        throw new Error('Câmera não está disponível');
+      }
+
+      // Verificar se há tracks de vídeo ativos
+      const videoTrack = webcamRef.current.video.srcObject?.getVideoTracks()?.[0];
+      if (!videoTrack || videoTrack.readyState !== 'live') {
+        throw new Error('Câmera não está ativa');
+      }
+
+      // Verificar se a câmera é virtual
+      const isVirtual = cameraService.isVirtualCamera(videoTrack.label);
+      console.log('Câmera detectada:', videoTrack.label, isVirtual ? '(virtual)' : '(física)');
+
+      // Permitir o uso de câmeras virtuais em ambiente de desenvolvimento
+      const isDev = process.env.NODE_ENV === 'development';
+      if (isVirtual && !isDev) {
+        toast.error('Câmeras virtuais não são permitidas para cadastro de visitantes');
+        throw new Error('Câmeras virtuais não são permitidas');
+      }
+
+      // Capturar screenshot
+      const screenshot = webcamRef.current.getScreenshot();
+      if (!screenshot) {
+        throw new Error('Não foi possível capturar a foto');
+      }
+
+      // Verificar se a imagem não está vazia ou preta
+      const isEmptyOrBlack = await isImageEmptyOrBlack(screenshot);
+      if (isEmptyOrBlack) {
+        throw new Error('A imagem capturada está vazia ou muito escura');
+      }
+
+      // Converter screenshot para File
+      const file = dataURLtoFile(screenshot, 'visitor-photo.jpg');
+
+      // Verificar qualidade da imagem
+      const imageElement = await createImageElement(screenshot);
+      const validation = await faceRecognitionService.validateImageQuality(imageElement, {
+        minFaceRatio: 0.02, // Valor mais baixo para permitir rostos menores
+        maxCenterDistance: 0.3 // Mais tolerante com posicionamento do rosto
+      });
+
+      if (!validation.valid) {
+        throw new Error(`Problema na foto: ${validation.reason}`);
+      }
+
+      // Definir a foto capturada
+      setCapturedImage(screenshot);
+      setFormData(prev => ({ ...prev, photo: file }));
+      setShowCamera(false);
+      toast.success('Foto capturada com sucesso!');
+    } catch (error) {
+      console.error('Erro ao capturar foto:', error);
+      setPhotoError(error.message);
+      toast.error(`Erro ao capturar foto: ${error.message}`);
+    } finally {
+      setIsCapturing(false);
+    }
+  };
+
+  const retakePhoto = () => {
+    setCapturedImage(null)
+    setFaceDetected(false)
+    setShowCamera(true)
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+
+    if (!validateForm()) {
+      toast.error('Por favor, corrija os erros no formulário')
+      return
+    }
+
+    try {
+      setLoading(true)
+
+      // Register visitor with photo
+      const visitorData = {
+        ...formData,
+        visitReason: formData.purpose, // Mapeando purpose para visitReason
+        photo: capturedImage,
+        registeredBy: user.id,
+        registeredAt: new Date().toISOString()
+      }
+
+      const result = await visitorService.registerVisitor(visitorData)
+
+      if (result.success) {
+        toast.success('Visitante cadastrado com sucesso!')
+        navigate('/visitors')
+      } else {
+        toast.error(`Erro ao cadastrar visitante: ${result.message || 'Erro desconhecido'}`)
+      }
+    } catch (error) {
+      console.error('Erro ao cadastrar visitante:', error)
+      toast.error(`Erro ao cadastrar visitante: ${error.message || 'Erro desconhecido'}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      email: '',
+      phone: '',
+      cpf: '',
+      rg: '',
+      cnh: '',
+      company: '',
+      purpose: '',
+      notes: '',
+      sectors: [],
+      departments: []
+    })
+    setCapturedImage(null)
+    setFaceDetected(false)
+    setShowCamera(false)
+    setErrors({})
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Cadastro de Visitante</h1>
+            <p className="mt-1 text-sm text-gray-500">
+              Preencha os dados do visitante e capture uma foto
+            </p>
+          </div>
+          <div className="flex space-x-3">
+            <button
+              type="button"
+              onClick={resetForm}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Limpar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Photo Section */}
+          <div className="lg:col-span-1">
+            <div className="bg-white shadow rounded-lg p-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Foto do Visitante</h3>
+
+              {!showCamera && !capturedImage && (
+                <div className="text-center">
+                  <div className="mx-auto h-32 w-32 bg-gray-300 rounded-full flex items-center justify-center mb-4">
+                    <Camera className="h-12 w-12 text-gray-600" />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleShowCamera} // Usando a nova função que inicializa o reconhecimento facial
+                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                  >
+                    <Camera className="h-4 w-4 mr-2" />
+                    Capturar Foto
+                  </button>
+                </div>
+              )}
+
+              {showCamera && (
+                <div className="space-y-4">
+                  <div className="relative w-full h-[500px] bg-gray-100 rounded-lg overflow-hidden" style={{ minHeight: '500px' }}>
+                    {cameraLoading && (
+                      <div className="absolute inset-0 bg-gray-100 rounded-lg flex items-center justify-center z-10">
+                        <div className="text-center">
+                          <LoadingSpinner size="large" />
+                          <p className="mt-2 text-sm text-gray-600">Ativando câmera...</p>
+                        </div>
+                      </div>
+                    )}
+                    <Webcam
+                      ref={webcamRef}
+                      audio={false}
+                      screenshotFormat="image/jpeg"
+                      screenshotQuality={0.95}
+                      className="w-full h-full object-cover rounded-lg"
+                      videoConstraints={{
+                        width: { ideal: 1920, min: 1280 },
+                        height: { ideal: 1080, min: 720 },
+                        facingMode: 'user',
+                        frameRate: { ideal: 30, min: 15 },
+                        aspectRatio: { ideal: 16 / 9 },
+                        // Use selected camera if available
+                        deviceId: selectedCameraId ? { exact: selectedCameraId } : undefined,
+                        // Tentar evitar câmeras virtuais com configurações específicas
+                        advanced: [
+                          { focusMode: { ideal: 'continuous' } },
+                          { exposureMode: { ideal: 'continuous' } },
+                          { whiteBalanceMode: { ideal: 'continuous' } },
+                          { exposureCompensation: { ideal: 0 } }
+                        ]
+                      }}
+                      onUserMedia={(stream) => {
+                        try {
+                          console.log('Camera activated successfully:', {
+                            streamId: stream.id,
+                            tracks: stream.getVideoTracks().map(track => ({
+                              id: track.id,
+                              label: track.label,
+                              enabled: track.enabled,
+                              readyState: track.readyState,
+                              settings: track.getSettings()
+                            }))
+                          })
+
+                          // Verificar se o stream tem tracks de vídeo ativos
+                          const videoTracks = stream.getVideoTracks()
+                          if (videoTracks.length === 0) {
+                            throw new Error('Nenhum track de vídeo encontrado no stream')
+                          }
+
+                          const track = videoTracks[0]
+                          if (track.readyState !== 'live') {
+                            throw new Error(`Track de vídeo não está ativo (estado: ${track.readyState})`)
+                          }
+
+                          // Verificar se conseguimos obter as configurações da câmera
+                          const settings = track.getSettings()
+                          console.log('Configurações da câmera:', settings)
+
+                          if (!settings.width || !settings.height) {
+                            console.warn('Câmera não retornou dimensões, isso pode causar problemas')
+                          }
+
+                          // Verificar se é uma câmera virtual
+                          const isVirtual = cameraService.isVirtualCamera(track.label);
+                          if (isVirtual) {
+                            console.warn('Câmera virtual detectada:', track.label);
+                            toast.warning('Câmera virtual detectada. Para melhor experiência, conecte uma câmera física.');
+                          }
+
+                          setCameraLoading(false)
+                          setCameraReady(true)
+                          toast.success('Câmera ativada com sucesso!')
+
+                          // Adicionar instruções para o usuário
+                          toast.info('Posicione seu rosto no centro da câmera e aproxime-se para uma melhor captura', {
+                            autoClose: 5000,
+                            position: 'top-center'
+                          });
+                        } catch (error) {
+                          console.error('Erro ao processar stream da câmera:', error)
+                          setCameraLoading(false)
+                          setCameraReady(false)
+                          toast.error('Erro ao inicializar câmera: ' + error.message)
+                        }
+                      }}
+                      onUserMediaError={(error) => {
+                        console.error('Webcam error details:', {
+                          name: error.name,
+                          message: error.message,
+                          constraint: error.constraint,
+                          stack: error.stack
+                        })
+                        setCameraLoading(false)
+                        setCameraReady(false)
+
+                        let errorMessage = 'Erro ao acessar a câmera.'
+                        if (error.name === 'NotAllowedError') {
+                          errorMessage = 'Permissão de câmera negada. Clique em "Tentar Novamente" e permita o acesso.'
+                        } else if (error.name === 'NotFoundError') {
+                          errorMessage = 'Nenhuma câmera encontrada. Verifique se há uma câmera conectada.'
+                        } else if (error.name === 'NotReadableError') {
+                          errorMessage = 'Câmera está sendo usada por outro aplicativo. Feche outros programas que possam estar usando a câmera.'
+                        } else if (error.name === 'OverconstrainedError') {
+                          errorMessage = 'Configurações de câmera não suportadas. Tentando com configurações diferentes...'
+                          // Tentar novamente com configurações mais simples
+                          setSelectedCameraId(null)
+                        } else if (error.name === 'AbortError') {
+                          errorMessage = 'Inicialização da câmera foi abortada. Tente novamente.'
+                        } else if (error.name === 'TypeError') {
+                          errorMessage = 'Erro de tipo ao acessar a câmera. Verifique se o navegador está atualizado.'
+                        }
+
+                        toast.error(errorMessage)
+                        setShowCamera(false)
+                      }}
+                      mirrored={true}
+                      imageSmoothing={true}
+                      forceScreenshotSourceSize={true}
+                      screenshotQuality={1}
+                    />
+                    <div className="absolute inset-0 border-2 border-primary-500 rounded-lg pointer-events-none">
+                      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 border-2 border-white rounded-full opacity-50"></div>
+                      {/* Guia de posicionamento */}
+                      <div className="absolute top-0 left-0 right-0 bg-black bg-opacity-70 text-white p-2 text-center text-sm rounded-t-lg">
+                        <p>Posicione seu rosto dentro do círculo e aproxime-se da câmera</p>
+                      </div>
+                      {/* Indicadores de posicionamento */}
+                      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                        <div className="w-52 h-52 flex items-center justify-center">
+                          <div className="absolute top-0 w-4 h-4 border-t-2 border-l-2 border-white opacity-80 -ml-26 -mt-26"></div>
+                          <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-white opacity-80 -mr-26 -mt-26"></div>
+                          <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-white opacity-80 -ml-26 -mb-26"></div>
+                          <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-white opacity-80 -mr-26 -mb-26"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex space-x-3">
+                    <button
+                      type="button"
+                      onClick={capturePhoto}
+                      disabled={isCapturing || faceLoading}
+                      className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
+                    >
+                      {isCapturing ? (
+                        <>
+                          <LoadingSpinner size="small" color="white" />
+                          <span className="ml-2">Capturando...</span>
+                        </>
+                      ) : faceLoading ? (
+                        <>
+                          <LoadingSpinner size="small" color="white" />
+                          <span className="ml-2">Analisando...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Camera className="h-4 w-4 mr-2" />
+                          Capturar Foto
+                        </>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowCamera(false)}
+                      className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {capturedImage && (
+                <div className="space-y-4">
+                  <div className="relative">
+                    <img
+                      src={capturedImage}
+                      alt="Captured"
+                      className="w-full rounded-lg"
+                    />
+                    {faceDetected && (
+                      <div className="absolute top-2 right-2 bg-green-500 text-white p-1 rounded-full">
+                        <Check className="h-4 w-4" />
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={retakePhoto}
+                    className="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Capturar Novamente
+                  </button>
+                </div>
+              )}
+
+              {errors.photo && (
+                <p className="mt-2 text-sm text-red-600 flex items-center">
+                  <AlertCircle className="h-4 w-4 mr-1" />
+                  {errors.photo}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Form Section */}
+          <div className="lg:col-span-2">
+            <div className="bg-white shadow rounded-lg p-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-6">Dados do Visitante</h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Name */}
+                <div className="md:col-span-2">
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                    Nome Completo *
+                  </label>
+                  <div className="mt-1 relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <User className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      type="text"
+                      id="name"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleChange}
+                      className={`block w-full pl-10 pr-3 py-4 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-1 text-lg min-h-[50px] ${errors.name
+                        ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
+                        : 'border-gray-300 focus:ring-primary-500 focus:border-primary-500'
+                        }`}
+                      placeholder="Digite o nome completo"
+                    />
+                  </div>
+                  {errors.name && (
+                    <p className="mt-1 text-sm text-red-600">{errors.name}</p>
+                  )}
+                </div>
+
+                {/* Email */}
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                    Email
+                  </label>
+                  <div className="mt-1 relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Mail className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      type="email"
+                      id="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      className={`block w-full pl-10 pr-3 py-4 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-1 text-lg min-h-[50px] ${errors.email
+                        ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
+                        : 'border-gray-300 focus:ring-primary-500 focus:border-primary-500'
+                        }`}
+                      placeholder="email@exemplo.com"
+                    />
+                  </div>
+                  {errors.email && (
+                    <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+                  )}
+                </div>
+
+                {/* Phone */}
+                <div>
+                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
+                    Telefone
+                  </label>
+                  <div className="mt-1 relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Phone className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      type="tel"
+                      id="phone"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleChange}
+                      className={`block w-full pl-10 pr-3 py-4 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-1 text-lg min-h-[50px] ${errors.phone
+                        ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
+                        : 'border-gray-300 focus:ring-primary-500 focus:border-primary-500'
+                        }`}
+                      placeholder="(11) 99999-9999"
+                    />
+                  </div>
+                  {errors.phone && (
+                    <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
+                  )}
+                </div>
+
+                {/* CPF */}
+                <div>
+                  <label htmlFor="cpf" className="block text-sm font-medium text-gray-700">
+                    CPF
+                  </label>
+                  <div className="mt-1 relative">
+                    <input
+                      type="text"
+                      id="cpf"
+                      name="cpf"
+                      value={formData.cpf}
+                      onChange={handleChange}
+                      maxLength={14}
+                      className={`block w-full pl-3 pr-10 py-4 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-1 text-lg min-h-[50px] ${errors.cpf
+                        ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
+                        : 'border-gray-300 focus:ring-primary-500 focus:border-primary-500'
+                        }`}
+                      placeholder="000.000.000-00"
+                    />
+                    <button
+                      type="button"
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                      onClick={() => setShowCpf(!showCpf)}
+                    >
+                      {showCpf ? (
+                        <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                      ) : (
+                        <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                      )}
+                    </button>
+                  </div>
+                  {errors.cpf && (
+                    <p className="mt-1 text-sm text-red-600">{errors.cpf}</p>
+                  )}
+                </div>
+
+                {/* RG */}
+                <div>
+                  <label htmlFor="rg" className="block text-sm font-medium text-gray-700">
+                    RG
+                  </label>
+                  <div className="mt-1 relative">
+                    <input
+                      type="text"
+                      id="rg"
+                      name="rg"
+                      value={formData.rg}
+                      onChange={handleChange}
+                      className="block w-full pl-3 pr-10 py-4 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 text-lg min-h-[50px]"
+                      placeholder="00.000.000-0"
+                    />
+                    <button
+                      type="button"
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                      onClick={() => setShowRg(!showRg)}
+                    >
+                      {showRg ? (
+                        <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                      ) : (
+                        <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* CNH */}
+                <div>
+                  <label htmlFor="cnh" className="block text-sm font-medium text-gray-700">
+                    CNH (opcional)
+                  </label>
+                  <div className="mt-1 relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <CreditCard className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      type="text"
+                      id="cnh"
+                      name="cnh"
+                      value={formData.cnh}
+                      onChange={handleChange}
+                      maxLength={11}
+                      className={`block w-full pl-10 pr-3 py-4 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-1 text-lg min-h-[50px] ${errors.cnh
+                        ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
+                        : 'border-gray-300 focus:ring-primary-500 focus:border-primary-500'
+                        }`}
+                      placeholder="00000000000"
+                    />
+                  </div>
+                  {errors.cnh && (
+                    <p className="mt-1 text-sm text-red-600">{errors.cnh}</p>
+                  )}
+                </div>
+
+                {/* Company */}
+                <div className="md:col-span-2">
+                  <label htmlFor="company" className="block text-sm font-medium text-gray-700">
+                    Empresa/Organização (opcional)
+                  </label>
+                  <div className="mt-1 relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Building className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      type="text"
+                      id="company"
+                      name="company"
+                      value={formData.company}
+                      onChange={handleChange}
+                      className="block w-full pl-10 pr-3 py-4 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 text-lg min-h-[50px]"
+                      placeholder="Nome da empresa ou organização"
+                    />
+                  </div>
+                </div>
+
+                {/* Purpose */}
+                <div className="md:col-span-2">
+                  <label htmlFor="purpose" className="block text-sm font-medium text-gray-700">
+                    Propósito da Visita *
+                  </label>
+                  <div className="mt-1 relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <FileText className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <select
+                      id="purpose"
+                      name="purpose"
+                      value={formData.purpose}
+                      onChange={handleChange}
+                      className={`block w-full pl-10 pr-3 py-4 border rounded-md shadow-sm focus:outline-none focus:ring-1 text-lg min-h-[50px] ${errors.purpose
+                        ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
+                        : 'border-gray-300 focus:ring-primary-500 focus:border-primary-500'
+                        }`}
+                    >
+                      <option value="">Selecione o propósito da visita</option>
+                      <option value="Participar de audiências públicas">Participar de audiências públicas</option>
+
+                      <option value="Buscar orientação sobre serviços legislativos">Buscar orientação sobre serviços legislativos</option>
+                      <option value="Participar de visitas guiadas ou eventos educativos">Participar de visitas guiadas ou eventos educativos</option>
+                      <option value="Participar de reuniões de comissões temáticas">Participar de reuniões de comissões temáticas</option>
+                      <option value="Reivindicar melhorias para o bairro ou comunidade">Reivindicar melhorias para o bairro ou comunidade</option>
+                      <option value="Realizar cobertura jornalística ou acadêmica">Realizar cobertura jornalística ou acadêmica</option>
+                      <option value="Participar de solenidades e homenagens">Participar de solenidades e homenagens</option>
+                      <option value="Entregar demandas da comunidade (reivindicações, abaixo-assinados, denúncias)">Entregar demandas da comunidade (reivindicações, abaixo-assinados, denúncias)</option>
+                      <option value="Solicitar apoio social">Solicitar apoio social</option>
+                      <option value="Participar de encontros com vereadores em eventos públicos internos">Participar de encontros com vereadores em eventos públicos internos</option>
+                      <option value="Registrar denúncias sobre omissão ou conduta de vereadores">Registrar denúncias sobre omissão ou conduta de vereadores</option>
+                      <option value="Entregar convites oficiais ou comunicados da comunidade">Entregar convites oficiais ou comunicados da comunidade</option>
+                      <option value="Solicitar homenagens, moções ou títulos honoríficos">Solicitar homenagens, moções ou títulos honoríficos</option>
+                      <option value="Apresentar projetos sociais ou culturais ao gabinete de um vereador">Apresentar projetos sociais ou culturais ao gabinete de um vereador</option>
+                      <option value="Reivindicar melhorias para bairros, escolas, ruas, saúde, transporte etc.">Reivindicar melhorias para bairros, escolas, ruas, saúde, transporte etc.</option>
+                      <option value="Buscar apoio político para iniciativas comunitárias ou associações">Buscar apoio político para iniciativas comunitárias ou associações</option>
+                      <option value="Discutir pautas relacionadas ao orçamento municipal com vereadores">Discutir pautas relacionadas ao orçamento municipal com vereadores</option>
+                      <option value="Participar de reuniões organizadas por gabinetes parlamentares">Participar de reuniões organizadas por gabinetes parlamentares</option>
+                    </select>
+                  </div>
+                  {errors.purpose && (
+                    <p className="mt-1 text-sm text-red-600">{errors.purpose}</p>
+                  )}
+                </div>
+
+                {/* Sectors - Multiple Selection */}
+                <div className="md:col-span-1">
+                  <label htmlFor="sectors" className="block text-sm font-medium text-gray-700">
+                    Setores a visitar * (máx. 3)
+                  </label>
+                  <div className="mt-1 relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Building className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <select
+                      id="sectors"
+                      name="sectors"
+                      value={formData.sectors}
+                      onChange={handleChange}
+                      multiple
+                      size="4"
+                      className={`block w-full pl-10 pr-3 py-4 border rounded-md shadow-sm focus:outline-none focus:ring-1 text-lg min-h-[120px] ${errors.sectors
+                        ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
+                        : 'border-gray-300 focus:ring-primary-500 focus:border-primary-500'
+                        }`}
+                    >
+                      {availableSectors.map(sector => (
+                        <option key={sector.id} value={sector.id}>{sector.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {formData.sectors.length > 0 && (
+                    <p className="mt-1 text-sm text-gray-600">Selecionados: {formData.sectors.length}/3</p>
+                  )}
+                  {errors.sectors && (
+                    <p className="mt-1 text-sm text-red-600">{errors.sectors}</p>
+                  )}
+                </div>
+
+                {/* Departments - Multiple Selection */}
+                <div className="md:col-span-1">
+                  <label htmlFor="departments" className="block text-sm font-medium text-gray-700">
+                    Departamentos a visitar * (máx. 3)
+                  </label>
+                  <div className="mt-1 relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Building className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <select
+                      id="departments"
+                      name="departments"
+                      value={formData.departments}
+                      onChange={handleChange}
+                      multiple
+                      size="4"
+                      className={`block w-full pl-10 pr-3 py-4 border rounded-md shadow-sm focus:outline-none focus:ring-1 text-lg min-h-[120px] ${errors.departments
+                        ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
+                        : 'border-gray-300 focus:ring-primary-500 focus:border-primary-500'
+                        }`}
+                    >
+                      {availableDepartments.map(department => (
+                        <option key={department.id} value={department.id}>{department.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {formData.departments.length > 0 && (
+                    <p className="mt-1 text-sm text-gray-600">Selecionados: {formData.departments.length}/3</p>
+                  )}
+                  {errors.departments && (
+                    <p className="mt-1 text-sm text-red-600">{errors.departments}</p>
+                  )}
+                </div>
+
+                {/* Notes */}
+                <div className="md:col-span-2">
+                  <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
+                    Observações
+                  </label>
+                  <div className="mt-1">
+                    <textarea
+                      id="notes"
+                      name="notes"
+                      rows={3}
+                      value={formData.notes}
+                      onChange={handleChange}
+                      className="block w-full px-3 py-4 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 text-lg min-h-[80px]"
+                      placeholder="Informações adicionais (opcional)..."
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Submit Button */}
+        <div className="bg-white shadow rounded-lg p-6">
+          <div className="flex justify-end space-x-3">
+            <button
+              type="button"
+              onClick={() => navigate('/visitors')}
+              className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <LoadingSpinner size="sm" color="white" />
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Cadastrar Visitante
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  )
+}
+
+// Movendo handleSubmit para dentro do componente
+const handleSubmit = async (e) => {
+  e.preventDefault()
+
+  if (!validateForm()) {
+    toast.error('Por favor, corrija os erros no formulário')
+    return
+  }
+
+  try {
+    setLoading(true)
+
+    // Register visitor with photo
+    const visitorData = {
+      ...formData,
+      visitReason: formData.purpose, // Mapeando purpose para visitReason
+      photo: capturedImage,
+      registeredBy: user.id,
+      registeredAt: new Date().toISOString()
+    }
+
+    const result = await visitorService.registerVisitor(visitorData)
+
+    if (result.success) {
+      toast.success('Visitante cadastrado com sucesso!')
+      navigate('/visitors')
+    } else {
+      toast.error(`Erro ao cadastrar visitante: ${result.message || 'Erro desconhecido'}`)
+    }
+  } catch (error) {
+    console.error('Erro ao cadastrar visitante:', error)
+    toast.error(`Erro ao cadastrar visitante: ${error.message || 'Erro desconhecido'}`)
+  } finally {
+    setLoading(false)
+  }
+}
+
+const resetForm = () => {
+  setFormData({
+    name: '',
+    email: '',
+    phone: '',
+    cpf: '',
+    rg: '',
+    cnh: '',
+    company: '',
+    purpose: '',
+    notes: '',
+    sector: '',
+    visitPerson: ''
+  })
+  setCapturedImage(null)
+  setFaceDetected(false)
+  setShowCamera(false)
+  setErrors({})
+}
+
+// Retorno do componente
+const renderComponent = () => {
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Cadastro de Visitante</h1>
+            <p className="mt-1 text-sm text-gray-500">
+              Preencha os dados do visitante e capture uma foto
+            </p>
+          </div>
+          <div className="flex space-x-3">
+            <button
+              type="button"
+              onClick={resetForm}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Limpar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Photo Section */}
+          <div className="lg:col-span-1">
+            <div className="bg-white shadow rounded-lg p-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Foto do Visitante</h3>
+
+              {!showCamera && !capturedImage && (
+                <div className="text-center">
+                  <div className="mx-auto h-32 w-32 bg-gray-300 rounded-full flex items-center justify-center mb-4">
+                    <Camera className="h-12 w-12 text-gray-600" />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleShowCamera} // Usando a nova função que inicializa o reconhecimento facial
+                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                  >
+                    <Camera className="h-4 w-4 mr-2" />
+                    Capturar Foto
+                  </button>
+              )}
+
+                  {showCamera && (
+                    <div className="space-y-4">
+                      <div className="relative w-full h-[500px] bg-gray-100 rounded-lg overflow-hidden" style={{ minHeight: '500px' }}>
+                        {cameraLoading && (
+                          <div className="absolute inset-0 bg-gray-100 rounded-lg flex items-center justify-center z-10">
+                            <div className="text-center">
+                              <LoadingSpinner size="large" />
+                              <p className="mt-2 text-sm text-gray-600">Ativando câmera...</p>
+                            </div>
+                          </div>
+                        )}
+                        <Webcam
+                          ref={webcamRef}
+                          audio={false}
+                          screenshotFormat="image/jpeg"
+                          screenshotQuality={0.95}
+                          className="w-full h-full object-cover rounded-lg"
+                          videoConstraints={{
+                            width: { ideal: 1920, min: 1280 },
+                            height: { ideal: 1080, min: 720 },
+                            facingMode: 'user',
+                            frameRate: { ideal: 30, min: 15 },
+                            aspectRatio: { ideal: 16 / 9 },
+                            // Use selected camera if available
+                            deviceId: selectedCameraId ? { exact: selectedCameraId } : undefined,
+                            // Tentar evitar câmeras virtuais com configurações específicas
+                            advanced: [
+                              { focusMode: { ideal: 'continuous' } },
+                              { exposureMode: { ideal: 'continuous' } },
+                              { whiteBalanceMode: { ideal: 'continuous' } },
+                              { exposureCompensation: { ideal: 0 } }
+                            ]
+                          }}
+                          onUserMedia={(stream) => {
+                            try {
+                              console.log('Camera activated successfully:', {
+                                streamId: stream.id,
+                                tracks: stream.getVideoTracks().map(track => ({
+                                  id: track.id,
+                                  label: track.label,
+                                  enabled: track.enabled,
+                                  readyState: track.readyState,
+                                  settings: track.getSettings()
+                                }))
+                              })
+
+                              // Verificar se o stream tem tracks de vídeo ativos
+                              const videoTracks = stream.getVideoTracks()
+                              if (videoTracks.length === 0) {
+                                throw new Error('Nenhum track de vídeo encontrado no stream')
+                              }
+
+                              const track = videoTracks[0]
+                              if (track.readyState !== 'live') {
+                                throw new Error(`Track de vídeo não está ativo (estado: ${track.readyState})`)
+                              }
+
+                              // Verificar se conseguimos obter as configurações da câmera
+                              const settings = track.getSettings()
+                              console.log('Configurações da câmera:', settings)
+
+                              if (!settings.width || !settings.height) {
+                                console.warn('Câmera não retornou dimensões, isso pode causar problemas')
+                              }
+
+                              // Verificar se é uma câmera virtual
+                              const isVirtual = cameraService.isVirtualCamera(track.label);
+                              if (isVirtual) {
+                                console.warn('Câmera virtual detectada:', track.label);
+                                toast.warning('Câmera virtual detectada. Para melhor experiência, conecte uma câmera física.');
+                              }
+
+                              setCameraLoading(false)
+                              setCameraReady(true)
+                              toast.success('Câmera ativada com sucesso!')
+
+                              // Adicionar instruções para o usuário
+                              toast.info('Posicione seu rosto no centro da câmera e aproxime-se para uma melhor captura', {
+                                autoClose: 5000,
+                                position: 'top-center'
+                              });
+                            } catch (error) {
+                              console.error('Erro ao processar stream da câmera:', error)
+                              setCameraLoading(false)
+                              setCameraReady(false)
+                              toast.error('Erro ao inicializar câmera: ' + error.message)
+                            }
+                          }}
+                          onUserMediaError={(error) => {
+                            console.error('Webcam error details:', {
+                              name: error.name,
+                              message: error.message,
+                              constraint: error.constraint,
+                              stack: error.stack
+                            })
+                            setCameraLoading(false)
+                            setCameraReady(false)
+
+                            let errorMessage = 'Erro ao acessar a câmera.'
+                            if (error.name === 'NotAllowedError') {
+                              errorMessage = 'Permissão de câmera negada. Clique em "Tentar Novamente" e permita o acesso.'
+                            } else if (error.name === 'NotFoundError') {
+                              errorMessage = 'Nenhuma câmera encontrada. Verifique se há uma câmera conectada.'
+                            } else if (error.name === 'NotReadableError') {
+                              errorMessage = 'Câmera está sendo usada por outro aplicativo. Feche outros programas que possam estar usando a câmera.'
+                            } else if (error.name === 'OverconstrainedError') {
+                              errorMessage = 'Configurações de câmera não suportadas. Tentando com configurações diferentes...'
+                              // Tentar novamente com configurações mais simples
+                              setSelectedCameraId(null)
+                            } else if (error.name === 'AbortError') {
+                              errorMessage = 'Inicialização da câmera foi abortada. Tente novamente.'
+                            } else if (error.name === 'TypeError') {
+                              errorMessage = 'Erro de tipo ao acessar a câmera. Verifique se o navegador está atualizado.'
+                            }
+
+                            toast.error(errorMessage)
+                            setShowCamera(false)
+                          }}
+                          mirrored={true}
+                          imageSmoothing={true}
+                          forceScreenshotSourceSize={true}
+                          screenshotQuality={1}
+                        />
+                        <div className="absolute inset-0 border-2 border-primary-500 rounded-lg pointer-events-none">
+                          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 border-2 border-white rounded-full opacity-50"></div>
+                          {/* Guia de posicionamento */}
+                          <div className="absolute top-0 left-0 right-0 bg-black bg-opacity-70 text-white p-2 text-center text-sm rounded-t-lg">
+                            <p>Posicione seu rosto dentro do círculo e aproxime-se da câmera</p>
+                          </div>
+                          {/* Indicadores de posicionamento */}
+                          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                            <div className="w-52 h-52 flex items-center justify-center">
+                              <div className="absolute top-0 w-4 h-4 border-t-2 border-l-2 border-white opacity-80 -ml-26 -mt-26"></div>
+                              <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-white opacity-80 -mr-26 -mt-26"></div>
+                              <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-white opacity-80 -ml-26 -mb-26"></div>
+                              <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-white opacity-80 -mr-26 -mb-26"></div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex space-x-3">
+                        <button
+                          type="button"
+                          onClick={capturePhoto}
+                          disabled={isCapturing || faceLoading}
+                          className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
+                        >
+                          {isCapturing ? (
+                            <>
+                              <LoadingSpinner size="small" color="white" />
+                              <span className="ml-2">Capturando...</span>
+                            </>
+                          ) : faceLoading ? (
+                            <>
+                              <LoadingSpinner size="small" color="white" />
+                              <span className="ml-2">Analisando...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Camera className="h-4 w-4 mr-2" />
+                              Capturar Foto
+                            </>
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowCamera(false)}
+                          className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {capturedImage && (
+                    <div className="space-y-4">
+                      <div className="relative">
+                        <img
+                          src={capturedImage}
+                          alt="Captured"
+                          className="w-full rounded-lg"
+                        />
+                        {faceDetected && (
+                          <div className="absolute top-2 right-2 bg-green-500 text-white p-1 rounded-full">
+                            <Check className="h-4 w-4" />
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={retakePhoto}
+                        className="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                      >
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Tirar nova foto
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+          </div>
+        </div>
+    </div>
+      </div >
+    </form >
+  </div >
+  );
+}
+
+return renderComponent();
+
+};
+
+export default VisitorRegistration;

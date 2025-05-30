@@ -2,6 +2,44 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
+## [1.4.0] - 2024-12-25
+
+### ✨ Novas Funcionalidades
+
+#### Sistema de Auditoria de Logs
+- **Registro Completo de Ações**: Implementação de sistema para registrar todas as ações dos usuários
+- **Interface de Visualização**: Página dedicada para visualização e análise de logs
+- **Filtros Avançados**: Sistema de filtros por período, tipo de ação e busca textual
+- **Categorização Visual**: Ícones e badges coloridos para diferentes tipos de ação
+- **Exportação de Dados**: Funcionalidade para exportar logs filtrados em formato CSV
+
+#### Melhorias na Segurança
+- **Trilha de Auditoria**: Registro detalhado de ações para fins de segurança e conformidade
+- **Monitoramento de Atividades**: Visualização de ações por tipo, data e usuário
+- **Detecção de Anomalias**: Base para identificação de padrões suspeitos de uso
+
+### 🎨 Melhorias de Interface
+
+#### Página de Auditoria
+- **Layout Responsivo**: Interface adaptável a diferentes tamanhos de tela
+- **Tema Escuro**: Suporte completo ao modo escuro do sistema
+- **Tabela Interativa**: Visualização organizada com colunas para data/hora, ação, descrição, detalhes
+- **Feedback Visual**: Spinners de carregamento e notificações toast
+
+### 🔧 Melhorias Técnicas
+
+#### Serviço de Auditoria
+- **Função `logAction`**: Registro de ações no `authService.js`
+- **Função `getAuditLogs`**: Recuperação e filtragem de logs com múltiplos critérios
+- **Armazenamento Local**: Implementação inicial com localStorage (limite de 1000 entradas)
+- **Filtros Eficientes**: Algoritmos otimizados para filtragem de grandes volumes de logs
+
+#### Documentação
+- **docs/auditoria-logs.md**: Documentação detalhada do sistema de auditoria
+- **Atualização do README**: Inclusão das novas funcionalidades na documentação principal
+
+---
+
 ## [1.3.0] - 2024-12-24
 
 ### ✨ Novas Funcionalidades

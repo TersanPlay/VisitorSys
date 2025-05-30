@@ -461,8 +461,8 @@ class FaceRecognitionService {
       const imageArea = imageWidth * imageHeight
       const faceRatio = faceArea / imageArea
 
-      // Verificação mais rigorosa do tamanho do rosto
-      const minFaceRatio = options.minFaceRatio || 0.05;
+      // Verificação mais flexível do tamanho do rosto
+      const minFaceRatio = options.minFaceRatio || 0.03; // Reduzido de 0.05 para 0.03 (3% da área da imagem)
       if (faceRatio < minFaceRatio) {
         return {
           valid: false,

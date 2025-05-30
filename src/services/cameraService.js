@@ -20,7 +20,8 @@ class CameraService {
         .map(device => ({
           deviceId: device.deviceId,
           label: device.label || `Câmera ${device.deviceId.substring(0, 8)}`,
-          groupId: device.groupId
+          groupId: device.groupId,
+          isVirtual: this.isVirtualCamera(device.label)
         }))
 
       console.log('Câmeras disponíveis:', this.availableCameras)
@@ -29,6 +30,23 @@ class CameraService {
       console.error('Erro ao enumerar dispositivos:', error)
       throw error
     }
+  }
+
+  // Verificar se uma câmera é virtual com base no nome
+  isVirtualCamera(label) {
+    if (!label) return false;
+
+    const virtualCameraKeywords = [
+      'virtual', 'animaze', 'obs', 'snap', 'droid', 'vcam', 'cam link',
+      'screen', 'capture', 'manycam', 'camtwist', 'epoccam', 'iriun',
+      'ndi', 'streamlabs', 'xsplit', 'elgato', 'avermedia', 'webcamoid',
+      'webcam studio', 'prism', 'splitcam', 'ecamm', 'mmhmm', 'camo',
+      'droidcam', 'iriun', 'ivccam', 'e2esdk', 'newtek', 'logitech capture',
+      'camera emulador', 'emulated', 'emulator', 'dummy', 'fake'
+    ];
+
+    const labelLower = label.toLowerCase();
+    return virtualCameraKeywords.some(keyword => labelLower.includes(keyword));
   }
 
   // Obter informações detalhadas sobre uma câmera específica
@@ -195,6 +213,11 @@ class CameraService {
       userAgent: navigator.userAgent,
       platform: navigator.platform
     }
+  }
+
+  // Listar câmeras disponíveis (alias para enumerateDevices)
+  async listCameras() {
+    return await this.enumerateDevices()
   }
 
   // Detectar mudanças nos dispositivos (câmeras conectadas/desconectadas)

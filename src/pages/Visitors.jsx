@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { visitorService } from '../services/visitorService'
 import LoadingSpinner from '../components/UI/LoadingSpinner'
@@ -19,13 +20,17 @@ import {
   UserCheck,
   UserX,
   Camera,
-  FileText
+  FileText,
+  AlertTriangle,
+  AlertCircle
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { toast } from 'react-hot-toast'
 
 const Visitors = () => {
+  const navigate = useNavigate()
+  const location = useLocation()
   const { user } = useAuth()
   const [visitors, setVisitors] = useState([])
   const [filteredVisitors, setFilteredVisitors] = useState([])
@@ -64,7 +69,7 @@ const Visitors = () => {
     // Search filter
     if (searchTerm) {
       const term = searchTerm.toLowerCase()
-      filtered = filtered.filter(visitor => 
+      filtered = filtered.filter(visitor =>
         visitor.name.toLowerCase().includes(term) ||
         visitor.email?.toLowerCase().includes(term) ||
         visitor.phone?.includes(term) ||
@@ -87,9 +92,15 @@ const Visitors = () => {
   }
 
   const handleViewVisitor = (visitor) => {
-    setSelectedVisitor(visitor)
-    setModalType('view')
-    setShowModal(true)
+    try {
+      console.log('Viewing visitor:', visitor)
+      setSelectedVisitor(visitor)
+      setModalType('view')
+      setShowModal(true)
+    } catch (error) {
+      console.error('Error viewing visitor:', error)
+      toast.error('Erro ao visualizar visitante')
+    }
   }
 
   const handleEditVisitor = (visitor) => {
@@ -140,7 +151,7 @@ const Visitors = () => {
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
-      
+
       toast.success('Lista de visitantes exportada com sucesso')
     } catch (error) {
       console.error('Error exporting visitors:', error)
@@ -197,7 +208,7 @@ const Visitors = () => {
             Exportar
           </button>
           <button
-            onClick={() => window.location.href = '/visitors/register'}
+            onClick={() => navigate('/visitors/register')}
             className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -324,7 +335,7 @@ const Visitors = () => {
                         </div>
                         <div className="mt-1 flex items-center text-xs text-gray-400">
                           <Calendar className="h-3 w-3 mr-1" />
-                          Cadastrado em {format(new Date(visitor.createdAt), 'dd/MM/yyyy HH:mm')}
+                          Cadastrado em {visitor.createdAt ? format(new Date(visitor.createdAt), 'dd/MM/yyyy HH:mm') : 'Data não disponível'}
                         </div>
                       </div>
                     </div>
@@ -369,7 +380,7 @@ const Visitors = () => {
               {searchTerm || filterStatus !== 'all' ? 'Nenhum visitante encontrado' : 'Nenhum visitante cadastrado'}
             </h3>
             <p className="mt-1 text-sm text-gray-500">
-              {searchTerm || filterStatus !== 'all' 
+              {searchTerm || filterStatus !== 'all'
                 ? 'Tente ajustar os filtros de busca.'
                 : 'Comece cadastrando um novo visitante.'
               }
@@ -392,103 +403,436 @@ const Visitors = () => {
       {/* Modal */}
       {showModal && selectedVisitor && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+          <div className="relative top-10 mx-auto p-0 border w-11/12 md:w-5/6 lg:w-4/5 xl:w-3/4 max-w-6xl shadow-2xl rounded-lg bg-transparent">
             <div className="mt-3">
-              {modalType === 'view' && (
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-medium text-gray-900">Detalhes do Visitante</h3>
-                    <button
-                      onClick={() => setShowModal(false)}
-                      className="text-gray-400 hover:text-gray-600"
-                    >
-                      ×
-                    </button>
-                  </div>
-                  <div className="space-y-4">
-                    <div className="flex items-center space-x-4">
-                      {selectedVisitor.photo ? (
-                        <img
-                          className="h-16 w-16 rounded-full object-cover"
-                          src={selectedVisitor.photo}
-                          alt={selectedVisitor.name}
-                        />
-                      ) : (
-                        <div className="h-16 w-16 rounded-full bg-gray-300 flex items-center justify-center">
-                          <User className="h-8 w-8 text-gray-600" />
-                        </div>
-                      )}
-                      <div>
-                        <h4 className="text-xl font-semibold">{selectedVisitor.name}</h4>
-                        {getStatusBadge(getVisitorStatus(selectedVisitor))}
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {selectedVisitor.email && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">Email</label>
-                          <p className="mt-1 text-sm text-gray-900">{selectedVisitor.email}</p>
-                        </div>
-                      )}
-                      {selectedVisitor.phone && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">Telefone</label>
-                          <p className="mt-1 text-sm text-gray-900">{selectedVisitor.phone}</p>
-                        </div>
-                      )}
-                      {selectedVisitor.company && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">Empresa</label>
-                          <p className="mt-1 text-sm text-gray-900">{selectedVisitor.company}</p>
-                        </div>
-                      )}
-                      {selectedVisitor.cpf && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">CPF</label>
-                          <p className="mt-1 text-sm text-gray-900">{selectedVisitor.cpf}</p>
-                        </div>
-                      )}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Data de Cadastro</label>
-                        <p className="mt-1 text-sm text-gray-900">
-                          {format(new Date(selectedVisitor.createdAt), 'dd/MM/yyyy HH:mm')}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+              {!selectedVisitor ? (
+                <div className="text-center py-4">
+                  <p className="text-gray-500">Erro ao carregar dados do visitante</p>
+                  <button
+                    onClick={() => setShowModal(false)}
+                    className="mt-2 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+                  >
+                    Fechar
+                  </button>
                 </div>
-              )}
+              ) : (
+                modalType === 'view' ? (
+                  <div className="max-w-4xl mx-auto">
+                    {/* Header com gradiente */}
+                    <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-t-lg p-6 text-white relative overflow-hidden">
+                      <div className="absolute inset-0 bg-black opacity-10"></div>
+                      <div className="relative z-10 flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                          <div className="p-3 bg-white bg-opacity-20 rounded-full">
+                            <User className="h-8 w-8 text-white" />
+                          </div>
+                          <div>
+                            <h3 className="text-2xl font-bold">Perfil do Visitante</h3>
+                            <p className="text-blue-100 text-sm">Informações detalhadas</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setShowModal(false)}
+                          className="p-2 hover:bg-white hover:bg-opacity-20 rounded-full transition-colors"
+                        >
+                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
 
-              {modalType === 'delete' && (
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-medium text-gray-900">Confirmar Exclusão</h3>
-                    <button
-                      onClick={() => setShowModal(false)}
-                      className="text-gray-400 hover:text-gray-600"
-                    >
-                      ×
-                    </button>
+                    {/* Conteúdo principal */}
+                    <div className="bg-gradient-to-b from-white to-blue-50 rounded-b-lg p-6 space-y-6">
+                      {/* Seção do perfil */}
+                      <div className="bg-white rounded-xl p-6 shadow-md border border-blue-100 relative overflow-hidden">
+                        <div className="flex flex-col md:flex-row items-center md:items-start space-y-4 md:space-y-0 md:space-x-6">
+                          {/* Decoração de fundo */}
+                          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-100 rounded-full -mr-32 -mt-32 opacity-20"></div>
+                          <div className="absolute bottom-0 left-0 w-40 h-40 bg-purple-100 rounded-full -ml-20 -mb-20 opacity-20"></div>
+
+                          {/* Foto do perfil */}
+                          <div className="relative z-10">
+                            {selectedVisitor.photo ? (
+                              <img
+                                className="h-32 w-32 rounded-full object-cover border-4 border-white shadow-lg ring-4 ring-blue-100 ring-opacity-50"
+                                src={selectedVisitor.photo}
+                                alt={selectedVisitor.name}
+                              />
+                            ) : (
+                              <div className="h-32 w-32 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center border-4 border-white shadow-lg ring-4 ring-blue-100 ring-opacity-50">
+                                <User className="h-12 w-12 text-white" />
+                              </div>
+                            )}
+                            <div className="absolute -bottom-2 -right-2 z-20">
+                              <Camera className="h-8 w-8 text-blue-500 bg-white rounded-full p-1.5 shadow-md border border-blue-100" />
+                            </div>
+                          </div>
+
+                          {/* Informações básicas */}
+                          <div className="flex-1 text-center md:text-left z-10 relative">
+                            <h4 className="text-3xl font-bold text-gray-900 mb-3">
+                              {selectedVisitor.name || 'Nome não disponível'}
+                            </h4>
+                            <div className="flex flex-wrap justify-center md:justify-start gap-2 mb-3">
+                              {getStatusBadge(getVisitorStatus(selectedVisitor))}
+                              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                <FileText className="w-3 h-3 mr-1" />
+                                Visitante
+                              </span>
+                            </div>
+                            {selectedVisitor.company && (
+                              <div className="flex items-center justify-center md:justify-start text-gray-600 mb-2">
+                                <Building className="h-4 w-4 mr-2" />
+                                <span className="font-medium">{selectedVisitor.company}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Informações de contato */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+                        <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1">
+                          <h5 className="text-lg font-semibold text-gray-900 mb-4 flex items-center border-b border-gray-100 pb-3">
+                            <div className="p-2.5 bg-blue-100 rounded-lg mr-3 shadow-sm">
+                              <Phone className="h-5 w-5 text-blue-600" />
+                            </div>
+                            Informações de Contato
+                          </h5>
+                          <div className="space-y-3">
+                            {selectedVisitor.email ? (
+                              <div className="flex items-center space-x-3">
+                                <Mail className="h-4 w-4 text-gray-400" />
+                                <div>
+                                  <p className="text-xs text-gray-500 uppercase tracking-wide">Email</p>
+                                  <p className="text-sm font-medium text-gray-900">{selectedVisitor.email}</p>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-center space-x-3 text-gray-400">
+                                <Mail className="h-4 w-4" />
+                                <span className="text-sm">Email não informado</span>
+                              </div>
+                            )}
+
+                            {selectedVisitor.phone ? (
+                              <div className="flex items-center space-x-3">
+                                <Phone className="h-4 w-4 text-gray-400" />
+                                <div>
+                                  <p className="text-xs text-gray-500 uppercase tracking-wide">Telefone</p>
+                                  <p className="text-sm font-medium text-gray-900">{selectedVisitor.phone}</p>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-center space-x-3 text-gray-400">
+                                <Phone className="h-4 w-4" />
+                                <span className="text-sm">Telefone não informado</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1">
+                          <h5 className="text-lg font-semibold text-gray-900 mb-4 flex items-center border-b border-gray-100 pb-3">
+                            <div className="p-2.5 bg-green-100 rounded-lg mr-3 shadow-sm">
+                              <FileText className="h-5 w-5 text-green-600" />
+                            </div>
+                            Dados Pessoais
+                          </h5>
+                          <div className="space-y-3">
+                            {selectedVisitor.cpf ? (
+                              <div className="flex items-center space-x-3">
+                                <FileText className="h-4 w-4 text-gray-400" />
+                                <div>
+                                  <p className="text-xs text-gray-500 uppercase tracking-wide">CPF</p>
+                                  <p className="text-sm font-medium text-gray-900">{selectedVisitor.cpf}</p>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-center space-x-3 text-gray-400">
+                                <FileText className="h-4 w-4" />
+                                <span className="text-sm">CPF não informado</span>
+                              </div>
+                            )}
+
+                            {selectedVisitor.createdAt ? (
+                              <div className="flex items-center space-x-3">
+                                <Calendar className="h-4 w-4 text-gray-400" />
+                                <div>
+                                  <p className="text-xs text-gray-500 uppercase tracking-wide">Data de Cadastro</p>
+                                  <p className="text-sm font-medium text-gray-900">
+                                    {format(new Date(selectedVisitor.createdAt), 'dd/MM/yyyy')}
+                                  </p>
+                                  <p className="text-xs text-gray-500 flex items-center mt-1">
+                                    <Clock className="h-3 w-3 mr-1" />
+                                    {format(new Date(selectedVisitor.createdAt), 'HH:mm')}
+                                  </p>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-center space-x-3 text-gray-400">
+                                <Calendar className="h-4 w-4" />
+                                <span className="text-sm">Data não disponível</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Seção de visitas recentes */}
+                      <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-md relative overflow-hidden">
+                        {/* Decoração de fundo */}
+                        <div className="absolute top-0 right-0 w-40 h-40 bg-purple-50 rounded-full -mr-20 -mt-20 opacity-30"></div>
+
+                        <h5 className="text-lg font-semibold text-gray-900 mb-4 flex items-center border-b border-gray-100 pb-3 relative z-10">
+                          <div className="p-2.5 bg-purple-100 rounded-lg mr-3 shadow-sm">
+                            <Clock className="h-5 w-5 text-purple-600" />
+                          </div>
+                          Histórico de Visitas
+                        </h5>
+                        {selectedVisitor.visits && selectedVisitor.visits.length > 0 ? (
+                          <div className="space-y-2">
+                            {selectedVisitor.visits.slice(0, 3).map((visit, index) => (
+                              <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors border border-gray-100 shadow-sm">
+                                <div className="flex items-center space-x-3">
+                                  <div className={`w-3 h-3 rounded-full ${visit.status === 'active' ? 'bg-green-400' : 'bg-gray-400'
+                                    }`}></div>
+                                  <div>
+                                    <p className="text-sm font-medium text-gray-900">
+                                      {visit.purpose || 'Visita'}
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                      {visit.createdAt ? format(new Date(visit.createdAt), 'dd/MM/yyyy HH:mm') : 'Data não disponível'}
+                                    </p>
+                                  </div>
+                                </div>
+                                <span className={`px-2 py-1 text-xs rounded-full ${visit.status === 'active'
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-gray-100 text-gray-800'
+                                  }`}>
+                                  {visit.status === 'active' ? 'Ativa' : 'Finalizada'}
+                                </span>
+                              </div>
+                            ))}
+                            {selectedVisitor.visits.length > 3 && (
+                              <p className="text-sm text-gray-500 text-center pt-2">
+                                +{selectedVisitor.visits.length - 3} visitas anteriores
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                            <Clock className="h-16 w-16 text-gray-300 mx-auto mb-3 opacity-50" />
+                            <p className="text-gray-500 text-sm">Nenhuma visita registrada</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Botões de ação */}
+                      <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-200 mt-2">
+                        <button
+                          onClick={() => {
+                            setModalType('edit')
+                          }}
+                          className="flex-1 inline-flex items-center justify-center px-5 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all shadow-md hover:shadow-lg"
+                        >
+                          <Edit className="h-4 w-4 mr-2" />
+                          Editar Visitante
+                        </button>
+                        <button
+                          onClick={() => setShowModal(false)}
+                          className="flex-1 inline-flex items-center justify-center px-5 py-3 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all shadow-sm hover:shadow-md"
+                        >
+                          Fechar
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-sm text-gray-500 mb-4">
-                    Tem certeza que deseja excluir o visitante <strong>{selectedVisitor.name}</strong>?
-                    Esta ação não pode ser desfeita.
-                  </p>
-                  <div className="flex justify-end space-x-3">
-                    <button
-                      onClick={() => setShowModal(false)}
-                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      onClick={confirmDelete}
-                      className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                    >
-                      Excluir
-                    </button>
+                ) : modalType === 'edit' ? (
+                  <div className="max-w-4xl mx-auto">
+                    {/* Header com gradiente */}
+                    <div className="bg-gradient-to-r from-green-600 to-blue-600 rounded-t-lg p-6 text-white relative overflow-hidden">
+                      <div className="absolute inset-0 bg-black opacity-10"></div>
+                      <div className="relative z-10 flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                          <div className="p-3 bg-white bg-opacity-20 rounded-full">
+                            <Edit className="h-8 w-8 text-white" />
+                          </div>
+                          <div>
+                            <h3 className="text-2xl font-bold">Editar Visitante</h3>
+                            <p className="text-blue-100 text-sm">Atualize as informações do visitante</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setShowModal(false)}
+                          className="p-2 hover:bg-white hover:bg-opacity-20 rounded-full transition-colors"
+                        >
+                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Formulário de edição */}
+                    <div className="bg-gradient-to-b from-white to-blue-50 rounded-b-lg p-6">
+                      <form onSubmit={(e) => {
+                        e.preventDefault()
+                        // Aqui você pode implementar a lógica de atualização
+                        toast.success('Visitante atualizado com sucesso!')
+                        setShowModal(false)
+                        loadVisitors()
+                      }} className="space-y-6">
+                        {/* Seção de informações básicas */}
+                        <div className="bg-white rounded-xl p-6 shadow-md border border-blue-100">
+                          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                            <User className="h-5 w-5 mr-2 text-blue-600" />
+                            Informações Básicas
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Nome Completo *
+                              </label>
+                              <input
+                                type="text"
+                                defaultValue={selectedVisitor.name}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                required
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Empresa
+                              </label>
+                              <input
+                                type="text"
+                                defaultValue={selectedVisitor.company || ''}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Seção de contato */}
+                        <div className="bg-white rounded-xl p-6 shadow-md border border-blue-100">
+                          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                            <Phone className="h-5 w-5 mr-2 text-green-600" />
+                            Informações de Contato
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Email
+                              </label>
+                              <input
+                                type="email"
+                                defaultValue={selectedVisitor.email || ''}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Telefone
+                              </label>
+                              <input
+                                type="tel"
+                                defaultValue={selectedVisitor.phone || ''}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Seção de documentos */}
+                        <div className="bg-white rounded-xl p-6 shadow-md border border-blue-100">
+                          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                            <FileText className="h-5 w-5 mr-2 text-purple-600" />
+                            Documentos
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                CPF
+                              </label>
+                              <input
+                                type="text"
+                                defaultValue={selectedVisitor.cpf || ''}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                placeholder="000.000.000-00"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Botões de ação */}
+                        <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-200">
+                          <button
+                            type="submit"
+                            className="flex-1 inline-flex items-center justify-center px-5 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all shadow-md hover:shadow-lg"
+                          >
+                            <Edit className="h-4 w-4 mr-2" />
+                            Salvar Alterações
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setModalType('view')}
+                            className="flex-1 inline-flex items-center justify-center px-5 py-3 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all shadow-sm hover:shadow-md"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      </form>
+                    </div>
                   </div>
-                </div>
+                ) : modalType === 'delete' ? (
+                  <div className="max-w-2xl mx-auto bg-white rounded-lg overflow-hidden shadow-xl">
+                    <div className="bg-gradient-to-r from-red-500 to-red-600 p-6 text-white relative overflow-hidden">
+                      <div className="absolute inset-0 bg-black opacity-10"></div>
+                      <div className="relative z-10 flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="p-2 bg-white bg-opacity-20 rounded-full">
+                            <AlertTriangle className="h-6 w-6 text-white" />
+                          </div>
+                          <h3 className="text-xl font-bold">Confirmar Exclusão</h3>
+                        </div>
+                        <button
+                          onClick={() => setShowModal(false)}
+                          className="p-2 hover:bg-white hover:bg-opacity-20 rounded-full transition-colors"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                    <div className="p-6">
+                      <div className="flex items-center mb-6 bg-red-50 p-4 rounded-lg border border-red-100">
+                        <AlertCircle className="h-8 w-8 text-red-500 mr-4" />
+                        <div>
+                          <p className="text-gray-700 font-medium mb-1">Tem certeza que deseja excluir o visitante?</p>
+                          <p className="text-gray-500 text-sm">Esta ação não pode ser desfeita e removerá permanentemente <strong className="text-red-600">{selectedVisitor.name}</strong> do sistema.</p>
+                        </div>
+                      </div>
+                      <div className="flex justify-end space-x-3 pt-4 border-t border-gray-100">
+                        <button
+                          onClick={() => setShowModal(false)}
+                          className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-sm transition-all"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          onClick={confirmDelete}
+                          className="px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-red-500 to-red-600 border border-transparent rounded-lg hover:from-red-600 hover:to-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 shadow-md hover:shadow-lg transition-all"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2 inline-block" />
+                          Excluir Visitante
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : null
               )}
             </div>
           </div>

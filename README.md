@@ -89,7 +89,12 @@ O Sistema de Registro de Visitantes é uma aplicação web moderna desenvolvida 
 
 - **Auditoria de Logs**
   - Registro detalhado de ações no sistema
-  - Relatórios de segurança
+  - Interface dedicada para visualização e análise de logs
+  - Sistema de filtros avançados (período, tipo de ação, busca textual)
+  - Categorização visual com ícones e badges coloridos
+  - Exportação de logs para formato CSV
+  - Suporte a tema escuro
+  - Documentação detalhada em docs/auditoria-logs.md
 
 ### Funcionalidades de Reconhecimento Facial
 

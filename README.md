@@ -27,6 +27,13 @@ O Sistema de Registro de Visitantes é uma aplicação web moderna desenvolvida 
   - Login com diferentes níveis de acesso (Administrador, Recepcionista, Gestor)
   - Proteção de rotas baseada em autenticação
 
+- **Perfil de Usuário**
+  - Interface completa para gerenciamento de informações pessoais
+  - Preferências do sistema (tema, notificações, acessibilidade)
+  - Configurações de segurança (alteração de senha, autenticação de dois fatores)
+  - Histórico de atividades do usuário
+  - Documentação detalhada em docs/perfil-usuario.md
+
 - **Registro de Visitantes**
   - Formulário completo para cadastro de visitantes com interface moderna
   - Captura de foto via webcam com detecção automática de câmeras físicas

@@ -18,7 +18,8 @@ import {
   Calendar,
   CheckCircle,
   XCircle,
-  Image
+  Image,
+  FileText
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -291,8 +292,8 @@ const Sectors = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${sector.status === 'active'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
                           }`}
                       >
                         {sector.status === 'active' ? 'Ativo' : 'Inativo'}
@@ -442,8 +443,8 @@ const Sectors = () => {
                       <dd className="mt-1">
                         <span
                           className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${selectedSector.status === 'active'
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-red-100 text-red-800'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-red-100 text-red-800'
                             }`}
                         >
                           {selectedSector.status === 'active' ? 'Ativo' : 'Inativo'}

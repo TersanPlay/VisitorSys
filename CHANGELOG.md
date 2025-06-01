@@ -36,6 +36,7 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 #### Documentação
 - **docs/auditoria-logs.md**: Documentação detalhada do sistema de auditoria
+- **docs/perfil-usuario.md**: Documentação completa do componente Meu Perfil
 - **Atualização do README**: Inclusão das novas funcionalidades na documentação principal
 
 ---

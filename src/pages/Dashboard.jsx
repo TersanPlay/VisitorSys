@@ -11,7 +11,8 @@ import {
   Calendar,
   Eye,
   BarChart3,
-  Activity
+  Activity,
+  User
 } from 'lucide-react'
 import { format, startOfDay, endOfDay, subDays, isToday } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -36,46 +37,46 @@ const Dashboard = () => {
   const loadDashboardData = async () => {
     try {
       setLoading(true)
-      
+
       // Load visitors and visits data
       const visitors = await visitorService.getAllVisitors()
       const visits = await visitorService.getAllVisits()
-      
+
       // Calculate statistics
       const today = new Date()
       const weekAgo = subDays(today, 7)
-      
-      const todayVisits = visits.filter(visit => 
+
+      const todayVisits = visits.filter(visit =>
         isToday(new Date(visit.startTime))
       )
-      
-      const weeklyVisits = visits.filter(visit => 
+
+      const weeklyVisits = visits.filter(visit =>
         new Date(visit.startTime) >= weekAgo
       )
-      
-      const activeVisits = visits.filter(visit => 
+
+      const activeVisits = visits.filter(visit =>
         visit.status === 'active'
       )
-      
+
       setStats({
         totalVisitors: visitors.length,
         activeVisits: activeVisits.length,
         todayVisits: todayVisits.length,
         weeklyVisits: weeklyVisits.length
       })
-      
+
       // Get recent visitors (last 10)
       const sortedVisitors = visitors
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
         .slice(0, 10)
       setRecentVisitors(sortedVisitors)
-      
+
       // Get recent activity (last 15 visits)
       const sortedVisits = visits
         .sort((a, b) => new Date(b.startTime) - new Date(a.startTime))
         .slice(0, 15)
       setRecentActivity(sortedVisits)
-      
+
     } catch (error) {
       console.error('Error loading dashboard data:', error)
       toast.error('Erro ao carregar dados do dashboard')
@@ -97,17 +98,16 @@ const Dashboard = () => {
       completed: 'bg-blue-100 text-blue-800',
       cancelled: 'bg-red-100 text-red-800'
     }
-    
+
     const labels = {
       active: 'Ativo',
       completed: 'Finalizado',
       cancelled: 'Cancelado'
     }
-    
+
     return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-        badges[status] || 'bg-gray-100 text-gray-800'
-      }`}>
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${badges[status] || 'bg-gray-100 text-gray-800'
+        }`}>
         {labels[status] || status}
       </span>
     )
@@ -115,11 +115,11 @@ const Dashboard = () => {
 
   const formatVisitDuration = (startTime, endTime) => {
     if (!endTime) return 'Em andamento'
-    
+
     const start = new Date(startTime)
     const end = new Date(endTime)
     const diffInMinutes = Math.floor((end - start) / (1000 * 60))
-    
+
     if (diffInMinutes < 60) {
       return `${diffInMinutes} min`
     } else {

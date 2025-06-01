@@ -1,0 +1,275 @@
+// Script para criar os 17 departamentos
+// Para usar este script, abra o console do navegador na página do sistema e cole o conteúdo
+
+async function createDepartments() {
+  // Importar o serviço de departamentos
+  const departmentService = window.departmentService;
+
+  if (!departmentService) {
+    console.error('Serviço de departamentos não encontrado. Certifique-se de estar na página do sistema.');
+    return;
+  }
+
+  // Lista de departamentos a serem criados
+  const departments = [
+    {
+      name: 'Departamento de Recursos Humanos',
+      code: 'RH',
+      description: 'Responsável pela gestão de pessoal, folha de pagamento, benefícios, férias e processos administrativos dos servidores.',
+      location: '1º Andar – Bloco Administrativo',
+      responsibleName: 'Maria Helena Costa',
+      responsiblePosition: 'Diretora de RH',
+      responsibleEmail: 'maria.helena@camara.gov.br',
+      phone: '(94) 3356-1001',
+      cellphone: '(94) 98123-0001',
+      workingHours: 'Segunda a Sexta, das 08h00 às 17h00',
+      status: 'active',
+      creationDate: new Date().toISOString().split('T')[0]
+    },
+    {
+      name: 'Departamento Legislativo',
+      code: 'DL',
+      description: 'Coordena os trabalhos legislativos, organização de sessões, tramitação de proposições e apoio aos vereadores.',
+      location: 'Plenário – Ala Central',
+      responsibleName: 'Pedro Luiz Andrade',
+      responsiblePosition: 'Diretor Legislativo',
+      responsibleEmail: 'pedro.andrade@camara.gov.br',
+      phone: '(94) 3356-1002',
+      cellphone: '(94) 98123-0002',
+      workingHours: 'Segunda a Sexta, das 08h00 às 17h00',
+      status: 'active',
+      creationDate: new Date().toISOString().split('T')[0]
+    },
+    {
+      name: 'Departamento de Contabilidade',
+      code: 'CONTAB',
+      description: 'Responsável pela escrituração contábil, elaboração de balancetes e prestação de contas da Câmara Municipal.',
+      location: '2º Andar – Bloco Financeiro',
+      responsibleName: 'Juliana Ribeiro Nunes',
+      responsiblePosition: 'Contadora Chefe',
+      responsibleEmail: 'juliana.nunes@camara.gov.br',
+      phone: '(94) 3356-1003',
+      cellphone: '(94) 98123-0003',
+      workingHours: 'Segunda a Sexta, das 08h00 às 17h00',
+      status: 'active',
+      creationDate: new Date().toISOString().split('T')[0]
+    },
+    {
+      name: 'Departamento Financeiro',
+      code: 'FIN',
+      description: 'Atua no planejamento financeiro, controle orçamentário e execução de pagamentos da instituição.',
+      location: '2º Andar – Bloco Financeiro',
+      responsibleName: 'Cláudio Mesquita',
+      responsiblePosition: 'Diretor Financeiro',
+      responsibleEmail: 'claudio.mesquita@camara.gov.br',
+      phone: '(94) 3356-1004',
+      cellphone: '(94) 98123-0004',
+      workingHours: 'Segunda a Sexta, das 08h00 às 17h00',
+      status: 'active',
+      creationDate: new Date().toISOString().split('T')[0]
+    },
+    {
+      name: 'Departamento Jurídico',
+      code: 'DJ',
+      description: 'Emite pareceres jurídicos, analisa projetos de lei e presta assessoria legal à Câmara.',
+      location: 'Térreo – Ala Jurídica',
+      responsibleName: 'Fernanda Lopes Barreto',
+      responsiblePosition: 'Procuradora Jurídica',
+      responsibleEmail: 'fernanda.lopes@camara.gov.br',
+      phone: '(94) 3356-1005',
+      cellphone: '(94) 98123-0005',
+      workingHours: 'Segunda a Sexta, das 08h00 às 17h00',
+      status: 'active',
+      creationDate: new Date().toISOString().split('T')[0]
+    },
+    {
+      name: 'Departamento de Licitações e Compras',
+      code: 'DLC',
+      description: 'Realiza processos licitatórios e gerencia aquisições de bens e serviços.',
+      location: '2º Andar – Bloco Administrativo',
+      responsibleName: 'Antônio Sérgio Lima',
+      responsiblePosition: 'Diretor de Licitações',
+      responsibleEmail: 'antonio.lima@camara.gov.br',
+      phone: '(94) 3356-1006',
+      cellphone: '(94) 98123-0006',
+      workingHours: 'Segunda a Sexta, das 08h00 às 17h00',
+      status: 'active',
+      creationDate: new Date().toISOString().split('T')[0]
+    },
+    {
+      name: 'Departamento de Tecnologia da Informação',
+      code: 'TI',
+      description: 'Suporte técnico, manutenção de sistemas e infraestrutura de rede da Câmara.',
+      location: 'Subsolo – Sala de Servidores',
+      responsibleName: 'Rafael Moura Rocha',
+      responsiblePosition: 'Diretor de TI',
+      responsibleEmail: 'rafael.moura@camara.gov.br',
+      phone: '(94) 3356-1007',
+      cellphone: '(94) 98123-0007',
+      workingHours: 'Segunda a Sexta, das 08h00 às 17h00',
+      status: 'active',
+      creationDate: new Date().toISOString().split('T')[0]
+    },
+    {
+      name: 'Departamento de Comunicação',
+      code: 'COM',
+      description: 'Produz conteúdos institucionais, gerencia redes sociais e assessora imprensa.',
+      location: 'Térreo – Sala de Imprensa',
+      responsibleName: 'Renata Silva Mourão',
+      responsiblePosition: 'Diretora de Comunicação',
+      responsibleEmail: 'renata.mourao@camara.gov.br',
+      phone: '(94) 3356-1008',
+      cellphone: '(94) 98123-0008',
+      workingHours: 'Segunda a Sexta, das 08h00 às 17h00',
+      status: 'active',
+      creationDate: new Date().toISOString().split('T')[0]
+    },
+    {
+      name: 'Departamento de Patrimônio',
+      code: 'DPAT',
+      description: 'Gerencia o patrimônio público, inventário e controle de bens móveis.',
+      location: '1º Andar – Sala 102',
+      responsibleName: 'Hélio Santos',
+      responsiblePosition: 'Diretor de Patrimônio',
+      responsibleEmail: 'helio.santos@camara.gov.br',
+      phone: '(94) 3356-1009',
+      cellphone: '(94) 98123-0009',
+      workingHours: 'Segunda a Sexta, das 08h00 às 17h00',
+      status: 'active',
+      creationDate: new Date().toISOString().split('T')[0]
+    },
+    {
+      name: 'Departamento de Protocolo',
+      code: 'DPROT',
+      description: 'Recebe, registra e encaminha documentos e correspondências.',
+      location: 'Térreo – Balcão de Atendimento',
+      responsibleName: 'Ana Beatriz Ferreira',
+      responsiblePosition: 'Diretora de Protocolo',
+      responsibleEmail: 'ana.ferreira@camara.gov.br',
+      phone: '(94) 3356-1010',
+      cellphone: '(94) 98123-0010',
+      workingHours: 'Segunda a Sexta, das 08h00 às 17h00',
+      status: 'active',
+      creationDate: new Date().toISOString().split('T')[0]
+    },
+    {
+      name: 'Departamento de Almoxarifado',
+      code: 'ALM',
+      description: 'Controla o estoque e distribuição de materiais e suprimentos.',
+      location: 'Subsolo – Galpão A',
+      responsibleName: 'Carlos Mendes',
+      responsiblePosition: 'Diretor de Almoxarifado',
+      responsibleEmail: 'carlos.mendes@camara.gov.br',
+      phone: '(94) 3356-1011',
+      cellphone: '(94) 98123-0011',
+      workingHours: 'Segunda a Sexta, das 08h00 às 17h00',
+      status: 'active',
+      creationDate: new Date().toISOString().split('T')[0]
+    },
+    {
+      name: 'Departamento de Biblioteca',
+      code: 'BIB',
+      description: 'Organiza o acervo bibliográfico, auxilia pesquisas legislativas e públicas.',
+      location: '3º Andar – Sala de Leitura',
+      responsibleName: 'Eliane Torres',
+      responsiblePosition: 'Bibliotecária Chefe',
+      responsibleEmail: 'eliane.torres@camara.gov.br',
+      phone: '(94) 3356-1012',
+      cellphone: '(94) 98123-0012',
+      workingHours: 'Segunda a Sexta, das 08h00 às 17h00',
+      status: 'active',
+      creationDate: new Date().toISOString().split('T')[0]
+    },
+    {
+      name: 'Departamento de Arquivo',
+      code: 'ARQ',
+      description: 'Responsável pela guarda, digitalização e preservação de documentos.',
+      location: '3º Andar – Ala Documental',
+      responsibleName: 'Bruno Alves Lima',
+      responsiblePosition: 'Arquivista Chefe',
+      responsibleEmail: 'bruno.lima@camara.gov.br',
+      phone: '(94) 3356-1013',
+      cellphone: '(94) 98123-0013',
+      workingHours: 'Segunda a Sexta, das 08h00 às 17h00',
+      status: 'active',
+      creationDate: new Date().toISOString().split('T')[0]
+    },
+    {
+      name: 'Departamento de Segurança Institucional',
+      code: 'SEG',
+      description: 'Realiza controle de acesso, segurança patrimonial e apoio às sessões.',
+      location: 'Portaria Principal',
+      responsibleName: 'Marcos F. Duarte',
+      responsiblePosition: 'Diretor de Segurança',
+      responsibleEmail: 'marcos.duarte@camara.gov.br',
+      phone: '(94) 3356-1014',
+      cellphone: '(94) 98123-0014',
+      workingHours: 'Segunda a Sexta, das 08h00 às 17h00',
+      status: 'active',
+      creationDate: new Date().toISOString().split('T')[0]
+    },
+    {
+      name: 'Departamento de Controle Interno',
+      code: 'DCI',
+      description: 'Avalia a conformidade legal e financeira dos atos administrativos da Casa.',
+      location: '2º Andar – Sala 205',
+      responsibleName: 'Lígia Marques',
+      responsiblePosition: 'Controladora Interna',
+      responsibleEmail: 'ligia.marques@camara.gov.br',
+      phone: '(94) 3356-1015',
+      cellphone: '(94) 98123-0015',
+      workingHours: 'Segunda a Sexta, das 08h00 às 17h00',
+      status: 'active',
+      creationDate: new Date().toISOString().split('T')[0]
+    },
+    {
+      name: 'Departamento de Ouvidoria',
+      code: 'OUV',
+      description: 'Recebe, analisa e encaminha sugestões, reclamações e denúncias dos cidadãos.',
+      location: 'Térreo – Sala de Atendimento ao Cidadão',
+      responsibleName: 'Mariana Oliveira Santos',
+      responsiblePosition: 'Ouvidora',
+      responsibleEmail: 'mariana.santos@camara.gov.br',
+      phone: '(94) 3356-1016',
+      cellphone: '(94) 98123-0016',
+      workingHours: 'Segunda a Sexta, das 08h00 às 17h00',
+      status: 'active',
+      creationDate: new Date().toISOString().split('T')[0]
+    },
+    {
+      name: 'Departamento de Cerimonial',
+      code: 'CER',
+      description: 'Organiza eventos oficiais, solenidades e recepção de autoridades.',
+      location: '1º Andar – Sala de Eventos',
+      responsibleName: 'Patrícia Mendes Albuquerque',
+      responsiblePosition: 'Diretora de Cerimonial',
+      responsibleEmail: 'patricia.mendes@camara.gov.br',
+      phone: '(94) 3356-1017',
+      cellphone: '(94) 98123-0017',
+      workingHours: 'Segunda a Sexta, das 08h00 às 17h00',
+      status: 'active',
+      creationDate: new Date().toISOString().split('T')[0]
+    }
+  ];
+
+  console.log(`Iniciando a criação de ${departments.length} departamentos...`);
+
+  // Criar departamentos um por um
+  for (let i = 0; i < departments.length; i++) {
+    const dept = departments[i];
+    try {
+      console.log(`Criando departamento ${i + 1}/${departments.length}: ${dept.name}`);
+      await departmentService.createDepartment(dept);
+      console.log(`✅ Departamento ${dept.name} criado com sucesso!`);
+    } catch (error) {
+      console.error(`❌ Erro ao criar departamento ${dept.name}:`, error);
+    }
+  }
+
+  console.log('Processo de criação de departamentos concluído!');
+}
+
+// Executar a função
+createDepartments().catch(error => {
+  console.error('Erro ao executar o script:', error);
+});

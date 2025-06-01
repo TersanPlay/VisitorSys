@@ -349,15 +349,6 @@ const Visitors = () => {
                       >
                         <Eye className="h-4 w-4" />
                       </button>
-                      {user?.permissions?.includes('visitors.edit') && (
-                        <button
-                          onClick={() => handleEditVisitor(visitor)}
-                          className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                          title="Editar"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </button>
-                      )}
                       {user?.permissions?.includes('visitors.delete') && (
                         <button
                           onClick={() => handleDeleteVisitor(visitor)}
@@ -365,6 +356,15 @@ const Visitors = () => {
                           title="Excluir"
                         >
                           <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
+                      {user?.permissions?.includes('visitors.edit') && (
+                        <button
+                          onClick={() => handleEditVisitor(visitor)}
+                          className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                          title="Editar"
+                        >
+                          <Edit className="h-4 w-4" />
                         </button>
                       )}
                     </div>
@@ -416,10 +416,10 @@ const Visitors = () => {
                   </button>
                 </div>
               ) : (
-                modalType === 'view' ? (
+                modalType === 'view' && selectedVisitor ? (
                   <div className="max-w-4xl mx-auto">
                     {/* Header com gradiente */}
-                    <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-t-lg p-6 text-white relative overflow-hidden">
+                    <div className="bg-gradient-to-r from-green-600 to-blue-600 rounded-t-lg p-6 text-white relative overflow-hidden">
                       <div className="absolute inset-0 bg-black opacity-10"></div>
                       <div className="relative z-10 flex items-center justify-between">
                         <div className="flex items-center space-x-4">
@@ -442,207 +442,131 @@ const Visitors = () => {
                       </div>
                     </div>
 
-                    {/* Conteúdo principal */}
-                    <div className="bg-gradient-to-b from-white to-blue-50 rounded-b-lg p-6 space-y-6">
-                      {/* Seção do perfil */}
-                      <div className="bg-white rounded-xl p-6 shadow-md border border-blue-100 relative overflow-hidden">
-                        <div className="flex flex-col md:flex-row items-center md:items-start space-y-4 md:space-y-0 md:space-x-6">
-                          {/* Decoração de fundo */}
-                          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-100 rounded-full -mr-32 -mt-32 opacity-20"></div>
-                          <div className="absolute bottom-0 left-0 w-40 h-40 bg-purple-100 rounded-full -ml-20 -mb-20 opacity-20"></div>
-
-                          {/* Foto do perfil */}
-                          <div className="relative z-10">
-                            {selectedVisitor.photo ? (
-                              <img
-                                className="h-32 w-32 rounded-full object-cover border-4 border-white shadow-lg ring-4 ring-blue-100 ring-opacity-50"
-                                src={selectedVisitor.photo}
-                                alt={selectedVisitor.name}
-                              />
-                            ) : (
-                              <div className="h-32 w-32 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center border-4 border-white shadow-lg ring-4 ring-blue-100 ring-opacity-50">
-                                <User className="h-12 w-12 text-white" />
+                    {/* Conteúdo do perfil - usando Card e CardContent */}
+                    <div className="bg-gradient-to-b from-white to-blue-50 rounded-b-lg p-6">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* Coluna da esquerda - Foto e informações básicas */}
+                        <div className="md:col-span-1">
+                          <div className="bg-white rounded-xl p-6 shadow-md border border-blue-100">
+                            <div className="text-center">
+                              <div className="h-32 w-32 rounded-full bg-primary-100 flex items-center justify-center mx-auto overflow-hidden mb-4">
+                                {selectedVisitor.photo ? (
+                                  <img
+                                    src={selectedVisitor.photo}
+                                    alt={selectedVisitor.name}
+                                    className="h-32 w-32 rounded-full object-cover"
+                                  />
+                                ) : (
+                                  <User className="h-16 w-16 text-primary-600" />
+                                )}
                               </div>
-                            )}
-                            <div className="absolute -bottom-2 -right-2 z-20">
-                              <Camera className="h-8 w-8 text-blue-500 bg-white rounded-full p-1.5 shadow-md border border-blue-100" />
+                              <h3 className="text-xl font-medium text-gray-900">{selectedVisitor.name}</h3>
+                              <div className="mt-1 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                {selectedVisitor.status === 'active' ? 'Ativo' : 'Inativo'}
+                              </div>
+                              {selectedVisitor.company && (
+                                <p className="mt-1 text-sm text-gray-500">{selectedVisitor.company}</p>
+                              )}
+                            </div>
+
+                            <div className="mt-6 space-y-4">
+                              <div className="flex items-center text-sm text-gray-600">
+                                <Mail className="h-4 w-4 mr-3 text-gray-400" />
+                                {selectedVisitor.email || 'Email não informado'}
+                              </div>
+                              <div className="flex items-center text-sm text-gray-600">
+                                <Phone className="h-4 w-4 mr-3 text-gray-400" />
+                                {selectedVisitor.phone || 'Telefone não informado'}
+                              </div>
+                              <div className="flex items-center text-sm text-gray-600">
+                                <Calendar className="h-4 w-4 mr-3 text-gray-400" />
+                                Registrado em {selectedVisitor.createdAt ? format(new Date(selectedVisitor.createdAt), 'dd/MM/yyyy') : 'Data desconhecida'}
+                              </div>
                             </div>
                           </div>
+                        </div>
 
-                          {/* Informações básicas */}
-                          <div className="flex-1 text-center md:text-left z-10 relative">
-                            <h4 className="text-3xl font-bold text-gray-900 mb-3">
-                              {selectedVisitor.name || 'Nome não disponível'}
+                        {/* Coluna da direita - Informações detalhadas */}
+                        <div className="md:col-span-2 space-y-6">
+                          {/* Dados Pessoais */}
+                          <div className="bg-white rounded-xl p-6 shadow-md border border-blue-100">
+                            <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                              <FileText className="h-5 w-5 mr-2 text-primary-600" />
+                              Dados Pessoais
                             </h4>
-                            <div className="flex flex-wrap justify-center md:justify-start gap-2 mb-3">
-                              {getStatusBadge(getVisitorStatus(selectedVisitor))}
-                              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                <FileText className="w-3 h-3 mr-1" />
-                                Visitante
-                              </span>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-500 mb-1">CPF</label>
+                                <p className="text-gray-900">{selectedVisitor.cpf || 'Não informado'}</p>
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-500 mb-1">Data de Registro</label>
+                                <p className="text-gray-900">{selectedVisitor.createdAt ? format(new Date(selectedVisitor.createdAt), 'dd/MM/yyyy') : 'Não disponível'}</p>
+                              </div>
                             </div>
-                            {selectedVisitor.company && (
-                              <div className="flex items-center justify-center md:justify-start text-gray-600 mb-2">
-                                <Building className="h-4 w-4 mr-2" />
-                                <span className="font-medium">{selectedVisitor.company}</span>
-                              </div>
-                            )}
                           </div>
-                        </div>
-                      </div>
 
-                      {/* Informações de contato */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
-                        <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1">
-                          <h5 className="text-lg font-semibold text-gray-900 mb-4 flex items-center border-b border-gray-100 pb-3">
-                            <div className="p-2.5 bg-blue-100 rounded-lg mr-3 shadow-sm">
-                              <Phone className="h-5 w-5 text-blue-600" />
-                            </div>
-                            Informações de Contato
-                          </h5>
-                          <div className="space-y-3">
-                            {selectedVisitor.email ? (
-                              <div className="flex items-center space-x-3">
-                                <Mail className="h-4 w-4 text-gray-400" />
-                                <div>
-                                  <p className="text-xs text-gray-500 uppercase tracking-wide">Email</p>
-                                  <p className="text-sm font-medium text-gray-900">{selectedVisitor.email}</p>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="flex items-center space-x-3 text-gray-400">
-                                <Mail className="h-4 w-4" />
-                                <span className="text-sm">Email não informado</span>
-                              </div>
-                            )}
-
-                            {selectedVisitor.phone ? (
-                              <div className="flex items-center space-x-3">
-                                <Phone className="h-4 w-4 text-gray-400" />
-                                <div>
-                                  <p className="text-xs text-gray-500 uppercase tracking-wide">Telefone</p>
-                                  <p className="text-sm font-medium text-gray-900">{selectedVisitor.phone}</p>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="flex items-center space-x-3 text-gray-400">
-                                <Phone className="h-4 w-4" />
-                                <span className="text-sm">Telefone não informado</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1">
-                          <h5 className="text-lg font-semibold text-gray-900 mb-4 flex items-center border-b border-gray-100 pb-3">
-                            <div className="p-2.5 bg-green-100 rounded-lg mr-3 shadow-sm">
-                              <FileText className="h-5 w-5 text-green-600" />
-                            </div>
-                            Dados Pessoais
-                          </h5>
-                          <div className="space-y-3">
-                            {selectedVisitor.cpf ? (
-                              <div className="flex items-center space-x-3">
-                                <FileText className="h-4 w-4 text-gray-400" />
-                                <div>
-                                  <p className="text-xs text-gray-500 uppercase tracking-wide">CPF</p>
-                                  <p className="text-sm font-medium text-gray-900">{selectedVisitor.cpf}</p>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="flex items-center space-x-3 text-gray-400">
-                                <FileText className="h-4 w-4" />
-                                <span className="text-sm">CPF não informado</span>
-                              </div>
-                            )}
-
-                            {selectedVisitor.createdAt ? (
-                              <div className="flex items-center space-x-3">
-                                <Calendar className="h-4 w-4 text-gray-400" />
-                                <div>
-                                  <p className="text-xs text-gray-500 uppercase tracking-wide">Data de Cadastro</p>
-                                  <p className="text-sm font-medium text-gray-900">
-                                    {format(new Date(selectedVisitor.createdAt), 'dd/MM/yyyy')}
-                                  </p>
-                                  <p className="text-xs text-gray-500 flex items-center mt-1">
-                                    <Clock className="h-3 w-3 mr-1" />
-                                    {format(new Date(selectedVisitor.createdAt), 'HH:mm')}
-                                  </p>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="flex items-center space-x-3 text-gray-400">
-                                <Calendar className="h-4 w-4" />
-                                <span className="text-sm">Data não disponível</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Seção de visitas recentes */}
-                      <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-md relative overflow-hidden">
-                        {/* Decoração de fundo */}
-                        <div className="absolute top-0 right-0 w-40 h-40 bg-purple-50 rounded-full -mr-20 -mt-20 opacity-30"></div>
-
-                        <h5 className="text-lg font-semibold text-gray-900 mb-4 flex items-center border-b border-gray-100 pb-3 relative z-10">
-                          <div className="p-2.5 bg-purple-100 rounded-lg mr-3 shadow-sm">
-                            <Clock className="h-5 w-5 text-purple-600" />
-                          </div>
-                          Histórico de Visitas
-                        </h5>
-                        {selectedVisitor.visits && selectedVisitor.visits.length > 0 ? (
-                          <div className="space-y-2">
-                            {selectedVisitor.visits.slice(0, 3).map((visit, index) => (
-                              <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors border border-gray-100 shadow-sm">
-                                <div className="flex items-center space-x-3">
-                                  <div className={`w-3 h-3 rounded-full ${visit.status === 'active' ? 'bg-green-400' : 'bg-gray-400'
-                                    }`}></div>
-                                  <div>
-                                    <p className="text-sm font-medium text-gray-900">
-                                      {visit.purpose || 'Visita'}
-                                    </p>
-                                    <p className="text-xs text-gray-500">
-                                      {visit.createdAt ? format(new Date(visit.createdAt), 'dd/MM/yyyy HH:mm') : 'Data não disponível'}
-                                    </p>
+                          {/* Histórico de Visitas */}
+                          <div className="bg-white rounded-xl p-6 shadow-md border border-blue-100">
+                            <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                              <Clock className="h-5 w-5 mr-2 text-primary-600" />
+                              Histórico de Visitas
+                            </h4>
+                            {selectedVisitor.visits && selectedVisitor.visits.length > 0 ? (
+                              <div className="space-y-3">
+                                {selectedVisitor.visits.slice(0, 3).map((visit, index) => (
+                                  <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                                    <div className="flex items-center space-x-3">
+                                      <div className="bg-blue-100 p-2 rounded-full">
+                                        <MapPin className="h-5 w-5 text-blue-600" />
+                                      </div>
+                                      <div>
+                                        <p className="text-sm font-medium text-gray-900">
+                                          {visit.purpose || 'Visita'}
+                                        </p>
+                                        <p className="text-xs text-gray-500">
+                                          {visit.createdAt ? format(new Date(visit.createdAt), 'dd/MM/yyyy HH:mm') : 'Data não disponível'}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <span className={`px-2 py-1 text-xs rounded-full ${visit.status === 'active'
+                                      ? 'bg-green-100 text-green-800'
+                                      : 'bg-gray-100 text-gray-800'
+                                      }`}>
+                                      {visit.status === 'active' ? 'Ativa' : 'Finalizada'}
+                                    </span>
                                   </div>
-                                </div>
-                                <span className={`px-2 py-1 text-xs rounded-full ${visit.status === 'active'
-                                  ? 'bg-green-100 text-green-800'
-                                  : 'bg-gray-100 text-gray-800'
-                                  }`}>
-                                  {visit.status === 'active' ? 'Ativa' : 'Finalizada'}
-                                </span>
+                                ))}
+                                {selectedVisitor.visits.length > 3 && (
+                                  <p className="text-sm text-gray-500 text-center pt-2">
+                                    +{selectedVisitor.visits.length - 3} visitas anteriores
+                                  </p>
+                                )}
                               </div>
-                            ))}
-                            {selectedVisitor.visits.length > 3 && (
-                              <p className="text-sm text-gray-500 text-center pt-2">
-                                +{selectedVisitor.visits.length - 3} visitas anteriores
-                              </p>
+                            ) : (
+                              <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                                <Clock className="h-16 w-16 text-gray-300 mx-auto mb-3 opacity-50" />
+                                <p className="text-gray-500 text-sm">Nenhuma visita registrada</p>
+                              </div>
                             )}
                           </div>
-                        ) : (
-                          <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-200">
-                            <Clock className="h-16 w-16 text-gray-300 mx-auto mb-3 opacity-50" />
-                            <p className="text-gray-500 text-sm">Nenhuma visita registrada</p>
-                          </div>
-                        )}
+                        </div>
                       </div>
 
                       {/* Botões de ação */}
-                      <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-200 mt-2">
+                      <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-200 mt-6">
                         <button
                           onClick={() => {
                             setModalType('edit')
                           }}
-                          className="flex-1 inline-flex items-center justify-center px-5 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all shadow-md hover:shadow-lg"
+                          className="flex-1 inline-flex items-center justify-center px-5 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-primary-600 to-blue-700 hover:from-primary-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-all shadow-md hover:shadow-lg"
                         >
                           <Edit className="h-4 w-4 mr-2" />
                           Editar Visitante
                         </button>
                         <button
                           onClick={() => setShowModal(false)}
-                          className="flex-1 inline-flex items-center justify-center px-5 py-3 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all shadow-sm hover:shadow-md"
+                          className="flex-1 inline-flex items-center justify-center px-5 py-3 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-all shadow-sm hover:shadow-md"
                         >
                           Fechar
                         </button>
@@ -692,7 +616,7 @@ const Visitors = () => {
                           </h4>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                              <label className="block text-sm font-medium text-gray-500 mb-1">
                                 Nome Completo *
                               </label>
                               <input
@@ -703,7 +627,7 @@ const Visitors = () => {
                               />
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                              <label className="block text-sm font-medium text-gray-500 mb-1">
                                 Empresa
                               </label>
                               <input
@@ -723,7 +647,7 @@ const Visitors = () => {
                           </h4>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                              <label className="block text-sm font-medium text-gray-500 mb-1">
                                 Email
                               </label>
                               <input
@@ -733,7 +657,7 @@ const Visitors = () => {
                               />
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                              <label className="block text-sm font-medium text-gray-500 mb-1">
                                 Telefone
                               </label>
                               <input
@@ -753,7 +677,7 @@ const Visitors = () => {
                           </h4>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                              <label className="block text-sm font-medium text-gray-500 mb-1">
                                 CPF
                               </label>
                               <input
@@ -839,7 +763,7 @@ const Visitors = () => {
         </div>
       )}
     </div>
-  )
+  );
 }
 
 export default Visitors

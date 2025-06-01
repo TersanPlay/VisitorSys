@@ -684,6 +684,49 @@ class FaceRecognitionService {
     }
   }
 
+  // Detect face in an image from dataURL
+  async detectFace(dataUrl) {
+    try {
+      // Verificar se a inicialização foi feita
+      if (!this.isInitialized) {
+        await this.initialize()
+      }
+
+      // Converter dataURL para elemento de imagem
+      const img = new Image()
+      await new Promise((resolve, reject) => {
+        img.onload = () => resolve()
+        img.onerror = (error) => reject(new Error('Erro ao carregar imagem'))
+        img.src = dataUrl
+      })
+
+      // Usar a função detectFaces existente
+      const detections = await this.detectFaces(img)
+
+      // Verificar se algum rosto foi detectado
+      const faceDetected = detections && detections.length > 0
+
+      // Retornar resultado com informações adicionais
+      return {
+        faceDetected,
+        faceCount: detections.length,
+        detections,
+        message: faceDetected
+          ? `${detections.length} rosto(s) detectado(s)`
+          : 'Nenhum rosto detectado'
+      }
+    } catch (error) {
+      console.error('Face detection error:', error)
+      return {
+        faceDetected: false,
+        faceCount: 0,
+        detections: [],
+        error: error.message,
+        message: 'Erro na detecção facial: ' + error.message
+      }
+    }
+  }
+
   // Get optimal camera settings for face recognition
   getOptimalCameraSettings() {
     return {

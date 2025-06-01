@@ -334,6 +334,97 @@ class VisitorService {
     }
   }
 
+  // Get all visits
+  async getAllVisits(filters = {}) {
+    try {
+      const visits = JSON.parse(localStorage.getItem('visits') || '[]')
+
+      // Apply filters if provided
+      let filteredVisits = [...visits]
+
+      // Map internal status to UI status
+      if (filters.status) {
+        filteredVisits = filteredVisits.filter(v => {
+          // Map 'in_progress' to 'active' for UI compatibility
+          if (filters.status === 'active') {
+            return v.status === 'in_progress' || v.status === 'active';
+          }
+          return v.status === filters.status;
+        });
+      }
+
+      if (filters.visitorId) {
+        filteredVisits = filteredVisits.filter(v => v.visitorId === filters.visitorId)
+      }
+
+      // Get visitor details for each visit
+      const visitors = await this.getAllVisitors()
+
+      return filteredVisits.map(visit => {
+        const visitor = visitors.find(v => v.id === visit.visitorId)
+        return {
+          ...visit,
+          visitor: visitor || null
+        }
+      })
+    } catch (error) {
+      console.error('Get all visits error:', error)
+      return []
+    }
+  }
+
+  // Delete visitor
+  async deleteVisitor(visitorId) {
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      // Get current visitors
+      const visitors = JSON.parse(localStorage.getItem('visitors') || '[]')
+
+      // Find visitor index
+      const visitorIndex = visitors.findIndex(v => v.id === visitorId)
+
+      if (visitorIndex === -1) {
+        throw new Error('Visitante não encontrado')
+      }
+
+      // Remove visitor
+      visitors.splice(visitorIndex, 1)
+
+      // Update localStorage
+      localStorage.setItem('visitors', JSON.stringify(visitors))
+
+      // Also remove any visits associated with this visitor
+      const visits = JSON.parse(localStorage.getItem('visits') || '[]')
+      const updatedVisits = visits.filter(visit => visit.visitorId !== visitorId)
+      localStorage.setItem('visits', JSON.stringify(updatedVisits))
+
+      return { success: true }
+    } catch (error) {
+      console.error('Delete visitor error:', error)
+      throw error
+    }
+  }
+
+  async mockEndVisit(visitId, exitData) {
+    await new Promise(resolve => setTimeout(resolve, 500))
+
+    const visits = JSON.parse(localStorage.getItem('visits') || '[]')
+    const visitIndex = visits.findIndex(v => v.id === visitId)
+
+    if (visitIndex !== -1) {
+      visits[visitIndex] = {
+        ...visits[visitIndex],
+        ...exitData,
+        status: 'completed'
+      }
+      localStorage.setItem('visits', JSON.stringify(visits))
+      return { visit: visits[visitIndex] }
+    }
+
+    throw new Error('Visita não encontrada')
+  }
+
   // Validate CPF
   validateCPF(cpf) {
     cpf = cpf.replace(/[^\d]/g, '')
@@ -397,25 +488,6 @@ class VisitorService {
     localStorage.setItem('visits', JSON.stringify(visits))
 
     return { visit }
-  }
-
-  async mockEndVisit(visitId, exitData) {
-    await new Promise(resolve => setTimeout(resolve, 500))
-
-    const visits = JSON.parse(localStorage.getItem('visits') || '[]')
-    const visitIndex = visits.findIndex(v => v.id === visitId)
-
-    if (visitIndex !== -1) {
-      visits[visitIndex] = {
-        ...visits[visitIndex],
-        ...exitData,
-        status: 'completed'
-      }
-      localStorage.setItem('visits', JSON.stringify(visits))
-      return { visit: visits[visitIndex] }
-    }
-
-    throw new Error('Visita não encontrada')
   }
 }
 

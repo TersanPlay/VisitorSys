@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { visitorService } from '../services/visitorService'
 import LoadingSpinner from '../components/UI/LoadingSpinner'
+import AddTestDataButton from '../components/UI/AddTestDataButton'
 import {
   Download,
   Calendar,
@@ -447,6 +448,7 @@ const Reports = () => {
             <RefreshCw className="h-4 w-4 mr-2" />
             Atualizar
           </button>
+          <AddTestDataButton onDataAdded={loadData} />
           <div className="flex space-x-2">
             <button
               onClick={() => exportReport('csv')}

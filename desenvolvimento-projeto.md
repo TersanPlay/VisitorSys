@@ -12,8 +12,12 @@ Este documento apresenta o estado atual do Sistema de Registro de Visitantes, de
    - Login com validação de credenciais
    - Proteção de rotas baseada em papéis de usuário
    - Validação de token
-   - Gerenciamento de perfil de usuário
-   - Registro de ações (log básico)
+   - Gerenciamento completo de perfil de usuário
+     - Informações pessoais e profissionais
+     - Preferências do sistema (tema, notificações, acessibilidade)
+     - Configurações de segurança (senha, autenticação de dois fatores)
+     - Histórico de atividades
+   - Registro detalhado de ações (logs)
 
 2. **Cadastro de Visitantes**
    - Formulário completo de registro com validação em tempo real e interface moderna

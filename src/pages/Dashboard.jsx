@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { visitorService } from '../services/visitorService'
 import LoadingSpinner from '../components/UI/LoadingSpinner'
+import MapaBairrosParauapebas from '../components/MapaBairrosParauapebas'
 import {
   Users,
   UserCheck,
@@ -12,7 +13,8 @@ import {
   Eye,
   BarChart3,
   Activity,
-  User
+  User,
+  MapPin
 } from 'lucide-react'
 import { format, startOfDay, endOfDay, subDays, isToday } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -314,6 +316,15 @@ const Dashboard = () => {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Mapa de Bairros de Parauapebas */}
+      <div className="mt-6">
+        <div className="flex items-center space-x-2 mb-4">
+          <MapPin className="h-6 w-6 text-primary-600" />
+          <h2 className="text-xl font-bold text-gray-800">Mapa de Visitas por Bairro</h2>
+        </div>
+        <MapaBairrosParauapebas />
       </div>
     </div>
   )

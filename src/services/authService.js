@@ -28,7 +28,7 @@ class AuthService {
     try {
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 1000))
-      
+
       // Mock user database
       const mockUsers = [
         {
@@ -58,11 +58,11 @@ class AuthService {
       ]
 
       const user = mockUsers.find(u => u.email === email && u.password === password)
-      
+
       if (user) {
         const { password: _, ...userWithoutPassword } = user
         const token = this.generateToken(userWithoutPassword)
-        
+
         return {
           success: true,
           user: userWithoutPassword,
@@ -95,7 +95,7 @@ class AuthService {
   async validateToken(token) {
     try {
       const payload = this.decrypt(token)
-      
+
       if (!payload || payload.exp < Date.now()) {
         throw new Error('Token expired')
       }
@@ -128,7 +128,8 @@ class AuthService {
       const user = mockUsers.find(u => u.id === payload.userId)
       return user
     } catch (error) {
-      throw new Error('Invalid token')
+      console.error('Token validation error:', error) // Adiciona log para depuração
+      return null // Retorna null em caso de erro para tratamento no AuthContext
     }
   }
 
@@ -137,10 +138,10 @@ class AuthService {
     try {
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 1500))
-      
+
       // Mock email validation
       const validEmails = ['admin@sistema.com', 'recepcao@sistema.com', 'gestor@sistema.com']
-      
+
       if (validEmails.includes(email)) {
         // In real implementation, send email here
         console.log(`Password reset email sent to: ${email}`)
@@ -165,7 +166,7 @@ class AuthService {
     try {
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 1000))
-      
+
       // Mock profile update
       return {
         success: true,
@@ -191,12 +192,12 @@ class AuthService {
         userAgent: navigator.userAgent,
         ip: 'localhost' // In real implementation, get from server
       }
-      
+
       // Store in localStorage for demo (use real database in production)
       const logs = JSON.parse(localStorage.getItem('auditLogs') || '[]')
       logs.push(logEntry)
       localStorage.setItem('auditLogs', JSON.stringify(logs.slice(-1000))) // Keep last 1000 logs
-      
+
       console.log('Action logged:', logEntry)
     } catch (error) {
       console.error('Log action error:', error)
@@ -207,28 +208,28 @@ class AuthService {
   async getAuditLogs(filters = {}) {
     try {
       const logs = JSON.parse(localStorage.getItem('auditLogs') || '[]')
-      
+
       // Apply filters
       let filteredLogs = logs
-      
+
       if (filters.startDate) {
-        filteredLogs = filteredLogs.filter(log => 
+        filteredLogs = filteredLogs.filter(log =>
           new Date(log.timestamp) >= new Date(filters.startDate)
         )
       }
-      
+
       if (filters.endDate) {
-        filteredLogs = filteredLogs.filter(log => 
+        filteredLogs = filteredLogs.filter(log =>
           new Date(log.timestamp) <= new Date(filters.endDate)
         )
       }
-      
+
       if (filters.action) {
-        filteredLogs = filteredLogs.filter(log => 
+        filteredLogs = filteredLogs.filter(log =>
           log.action.toLowerCase().includes(filters.action.toLowerCase())
         )
       }
-      
+
       return filteredLogs.reverse() // Most recent first
     } catch (error) {
       console.error('Get audit logs error:', error)

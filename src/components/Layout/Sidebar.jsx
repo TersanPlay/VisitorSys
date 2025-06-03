@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import {
@@ -18,6 +18,11 @@ import {
 const Sidebar = ({ onNavigate }) => {
   const { user, hasPermission } = useAuth()
   const location = useLocation()
+  const [openSubmenus, setOpenSubmenus] = useState({});
+
+  const toggleSubmenu = (itemName) => {
+    setOpenSubmenus(prev => ({ ...prev, [itemName]: !prev[itemName] }));
+  };
 
   const menuItems = [
     {
@@ -48,7 +53,24 @@ const Sidebar = ({ onNavigate }) => {
       name: 'Setores',
       href: '/sectors',
       icon: Building2,
-      permission: 'sectors_manage'
+      permission: 'sectors_manage',
+      submenu: [
+        {
+          name: 'Listar Setores',
+          href: '/sectors',
+          permission: 'sectors_manage'
+        },
+        {
+          name: 'Adicionar Setor',
+          href: '/sectors/add',
+          permission: 'sectors_manage'
+        },
+        {
+          name: 'Criar Setores em Lote',
+          href: '/sectors/seeder',
+          permission: 'sectors_manage' // Ou uma permissão mais específica se necessário
+        }
+      ]
     },
     {
       name: 'Departamentos',
@@ -118,32 +140,77 @@ const Sidebar = ({ onNavigate }) => {
       {/* Navigation */}
       <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
         {filteredMenuItems.map((item) => {
-          const Icon = item.icon
+          const Icon = item.icon;
+          const isSubmenuOpen = openSubmenus[item.name];
+
+          if (item.submenu) {
+            return (
+              <div key={item.name}>
+                <button
+                  onClick={() => toggleSubmenu(item.name)}
+                  className={`group flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200
+                    ${isActive(item.href) || item.submenu.some(subItem => isActive(subItem.href))
+                      ? 'text-primary-700 dark:text-primary-300'
+                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100'
+                    }`}
+                >
+                  <div className="flex items-center">
+                    <Icon
+                      className={`mr-3 h-5 w-5 transition-colors duration-200
+                        ${isActive(item.href) || item.submenu.some(subItem => isActive(subItem.href))
+                          ? 'text-primary-600 dark:text-primary-400'
+                          : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-500 dark:group-hover:text-gray-400'
+                        }`}
+                    />
+                    {item.name}
+                  </div>
+                  {/* Chevron Icon */}
+                  <svg className={`w-4 h-4 transform transition-transform duration-200 ${isSubmenuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                {isSubmenuOpen && (
+                  <div className="pl-4 mt-1 space-y-1">
+                    {item.submenu.map((subItem) => (
+                      <NavLink
+                        key={subItem.name}
+                        to={subItem.href}
+                        onClick={onNavigate}
+                        className={`group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200
+                          ${isActive(subItem.href)
+                            ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border-r-2 border-primary-600 dark:border-primary-400'
+                            : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100'
+                          }`}
+                      >
+                        {/* Subitem Icon can be added here if needed */}
+                        {subItem.name}
+                      </NavLink>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
           return (
             <NavLink
               key={item.name}
               to={item.href}
               onClick={onNavigate}
-              className={`
-                group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200
+              className={`group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200
                 ${isActive(item.href)
                   ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border-r-2 border-primary-600 dark:border-primary-400'
                   : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100'
-                }
-              `}
+                }`}
             >
               <Icon
-                className={`
-                  mr-3 h-5 w-5 transition-colors duration-200
+                className={`mr-3 h-5 w-5 transition-colors duration-200
                   ${isActive(item.href)
                     ? 'text-primary-600 dark:text-primary-400'
                     : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-500 dark:group-hover:text-gray-400'
-                  }
-                `}
+                  }`}
               />
               {item.name}
             </NavLink>
-          )
+          );
         })}
       </nav>
 

@@ -74,6 +74,11 @@ class DepartmentService {
       // Simulação de API (substituir por chamada real à API)
       const response = await this.mockCreateDepartment(departmentRecord)
 
+      // Criar estrutura de diretórios após criação bem-sucedida
+      await this.createDirectoryStructure(response.department)
+
+      toast.success('Departamento criado com sucesso!')
+
       return {
         success: true,
         department: response.department,
@@ -81,6 +86,7 @@ class DepartmentService {
       }
     } catch (error) {
       console.error('Erro ao criar departamento:', error)
+      toast.error('Ocorreu um erro ao criar o departamento')
       throw error
     }
   }
@@ -179,6 +185,59 @@ class DepartmentService {
     // Simulação de upload de arquivo
     // Em uma implementação real, isso enviaria o arquivo para o servidor
     return URL.createObjectURL(file)
+  }
+
+  // Criar estrutura de diretórios
+  async createDirectoryStructure(departmentRecord) {
+    try {
+      // Em um ambiente de produção, isso seria uma chamada à API do backend
+      // que criaria a estrutura de diretórios no servidor
+
+      const currentYear = new Date().getFullYear();
+      const months = [
+        '01-Janeiro',
+        '02-Fevereiro',
+        '03-Março',
+        '04-Abril',
+        '05-Maio',
+        '06-Junho',
+        '07-Julho',
+        '08-Agosto',
+        '09-Setembro',
+        '10-Outubro',
+        '11-Novembro',
+        '12-Dezembro'
+      ];
+
+      // Obter o nome do departamento para criar a pasta específica
+      const departmentName = departmentRecord?.name || 'departamento_sem_nome';
+      const safeDepartmentName = departmentName.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+
+      console.log(`Criando estrutura de diretórios para o departamento "${departmentName}" no ano ${currentYear}:`);
+      console.log(`- dadosplanilha/`);
+      console.log(`  └── ${safeDepartmentName}/`);
+      console.log(`      └── ${currentYear}/`);
+
+      for (const month of months) {
+        console.log(`          ├── ${month}/`);
+      }
+
+      // Em um ambiente real, aqui seria feita uma chamada à API para criar os diretórios
+      // Por exemplo:
+      // await apiClient.post('/directories/create', {
+      //   basePath: 'dadosplanilha',
+      //   departmentName: safeDepartmentName,
+      //   year: currentYear,
+      //   months: months
+      // });
+
+      console.log(`Estrutura de diretórios criada com sucesso para o departamento "${departmentName}"!`);
+      return true;
+    } catch (error) {
+      console.error('Erro ao criar estrutura de diretórios:', error);
+      toast.error('Não foi possível criar a estrutura de diretórios');
+      return false;
+    }
   }
 
   // Métodos de simulação de API (substituir por chamadas reais à API)

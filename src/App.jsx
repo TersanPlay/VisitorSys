@@ -1,6 +1,7 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './contexts/AuthContext'
+import { Toaster } from 'react-hot-toast'
 import Layout from './components/Layout/Layout'
 import Login from './pages/Auth/Login'
 import Dashboard from './pages/Dashboard'
@@ -10,12 +11,16 @@ import VisitorEntry from './pages/VisitorEntry'
 import Reports from './pages/Reports'
 import Sectors from './pages/Sectors'
 import SectorForm from './pages/SectorForm'
+import SectorSeederPage from './pages/SectorSeederPage'
 import DepartmentList from './pages/DepartmentList'
 import DepartmentForm from './pages/DepartmentForm'
+import TabelaGabinete from './pages/TabelaGabinete'
+import TabelaDepartamentos from './pages/TabelaDepartamentos'
 import AuditLogs from './pages/AuditLogs'
 import TotemPage from './pages/TotemPage'
 import MeuPerfil from './pages/MeuPerfil'
 import LoadingSpinner from './components/UI/LoadingSpinner'
+import './App.css'
 
 function App() {
   const { user, loading } = useAuth()
@@ -53,9 +58,12 @@ function App() {
                     <Route path="/sectors" element={<Sectors />} />
                     <Route path="/sectors/add" element={<SectorForm />} />
                     <Route path="/sectors/:id/edit" element={<SectorForm />} />
+                    <Route path="/sectors/seeder" element={<SectorSeederPage />} />
                     <Route path="/departments" element={<DepartmentList />} />
                     <Route path="/departments/add" element={<DepartmentForm />} />
                     <Route path="/departments/:id/edit" element={<DepartmentForm />} />
+                    <Route path="/tabelagabinete/:id" element={<TabelaGabinete />} />
+                    <Route path="/tabeladepartamentos/:id" element={<TabelaDepartamentos />} />
                     <Route path="/reports" element={<Reports />} />
                     <Route path="/audit-logs" element={<AuditLogs />} />
                     <Route path="/profile" element={<MeuPerfil />} />

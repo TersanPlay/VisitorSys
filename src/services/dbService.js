@@ -75,56 +75,27 @@ class DbService {
     visitors.push(visitor);
     return this.setItem('visitors', visitors);
   }
-}
 
+  getVisits() {
+    return this.getItem('visits') || [];
+  }
 
-
-
-
-getVisits()
-{
-  return this.getItem('visits') || [];
-}
-
-saveVisit(visit)
-{
-  const visits = this.getVisits();
-  visits.push(visit);
-  return this.setItem('visits', visits);
-}
-
-updateVisit(visitId, updatedVisit)
-{
-  const visits = this.getVisits();
-  const index = visits.findIndex(v => v.id === visitId);
-  if (index !== -1) {
-    visits[index] = { ...visits[index], ...updatedVisit };
+  saveVisit(visit) {
+    const visits = this.getVisits();
+    visits.push(visit);
     return this.setItem('visits', visits);
   }
-  return false;
-}
 
-updateDepartment(departmentId, updatedDepartment)
-{
-  const departments = this.getDepartments();
-  const index = departments.findIndex(d => d.id === departmentId);
-  if (index !== -1) {
-    departments[index] = { ...departments[index], ...updatedDepartment };
-    return this.setItem('departments', departments);
+  updateVisit(visitId, updatedVisit) {
+    const visits = this.getVisits();
+    const index = visits.findIndex(v => v.id === visitId);
+    if (index !== -1) {
+      visits[index] = { ...visits[index], ...updatedVisit };
+      return this.setItem('visits', visits);
+    }
+    return false;
   }
-  return false;
 }
 
-updateSector(sectorId, updatedSector)
-{
-  const sectors = this.getSectors();
-  const index = sectors.findIndex(s => s.id === sectorId);
-  if (index !== -1) {
-    sectors[index] = { ...sectors[index], ...updatedSector };
-    return this.setItem('sectors', sectors);
-  }
-  return false;
-}
-
-// Criar uma instância única do serviço de banco de dados
+// Exportar uma instância única do serviço
 export const dbService = new DbService();

@@ -198,6 +198,14 @@ const DepartmentList = () => {
                         >
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => navigate(`/tabeladepartamentos/${department.id}`)}
+                          title="Visualizar Servidores"
+                        >
+                          <Table className="h-4 w-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>

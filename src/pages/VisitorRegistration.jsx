@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { toast } from 'react-hot-toast'
 import Webcam from 'react-webcam'
-import { Camera, RefreshCw, Check, X, Save, Building, User, Mail, Phone, FileText, Briefcase, MessageSquare } from 'lucide-react'
+import { Camera, RefreshCw, Check, X, Save, Building, User, Mail, Phone, FileText, Briefcase, MessageSquare, MapPin, Hash, Home, Map } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { visitorService } from '../services/visitorService'
 import { faceRecognitionService } from '../services/faceRecognitionService'
@@ -29,6 +29,7 @@ const VisitorRegistration = () => {
   // Estado inicial do formulário
   const [formData, setFormData] = useState({
     name: '',
+    nomeSocial: '',
     email: '',
     phone: '',
     cpf: '',
@@ -37,7 +38,15 @@ const VisitorRegistration = () => {
     company: '',
     notes: '',
     photo: null,
-    visitReason: ''
+    visitReason: '',
+    // Novos campos de endereço
+    cep: '',
+    rua: '',
+    numero: '',
+    complemento: '',
+    bairro: '',
+    cidade: '',
+    uf: ''
     // Removido: sectors: [], departments: []
   })
   const [errors, setErrors] = useState({})
@@ -67,13 +76,22 @@ const VisitorRegistration = () => {
 
   const loadCameras = async () => {
     try {
-      const cameras = await cameraService.getAvailableCameras()
-      setAvailableCameras(cameras)
+      // Verifica se o navegador suporta mediaDevices
+      if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+        console.warn('Este navegador não suporta a API de câmera');
+        setAvailableCameras([]);
+        return;
+      }
+      
+      const cameras = await cameraService.getAvailableCameras();
+      setAvailableCameras(cameras);
       if (cameras.length > 0) {
-        setSelectedCameraId(cameras[0].deviceId)
+        setSelectedCameraId(cameras[0].deviceId);
       }
     } catch (error) {
-      console.error('Erro ao carregar câmeras:', error)
+      console.error('Erro ao carregar câmeras:', error);
+      setAvailableCameras([]);
+      // Não exibe erro para o usuário já que a foto é opcional
     }
   }
 
@@ -95,29 +113,35 @@ const VisitorRegistration = () => {
   }
 
   const openCamera = async () => {
+    // Verifica se o navegador suporta a API de câmera
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setPhotoError('Este navegador não suporta acesso à câmera. Como a foto é opcional, você pode continuar o cadastro sem ela.');
+      return;
+    }
+    
     if (!cameraPermissions) {
       try {
-        const granted = await cameraService.requestPermissions()
-        setCameraPermissions(granted)
+        const granted = await cameraService.requestPermissions();
+        setCameraPermissions(granted);
         if (!granted) {
-          setPhotoError('Permissão para câmera negada. Por favor, habilite o acesso à câmera nas configurações do seu navegador.')
-          return
+          setPhotoError('Permissão para câmera negada. Como a foto é opcional, você pode continuar o cadastro sem ela.');
+          return;
         }
       } catch (error) {
-        console.error('Erro ao solicitar permissões da câmera:', error)
-        setPhotoError('Erro ao acessar a câmera. Por favor, verifique se a câmera está conectada e funcionando.')
-        return
+        console.error('Erro ao solicitar permissões da câmera:', error);
+        setPhotoError('Erro ao acessar a câmera. Como a foto é opcional, você pode continuar o cadastro sem ela.');
+        return;
       }
     }
 
-    setCameraLoading(true)
-    setShowCamera(true)
-    setPhotoError(null)
+    setCameraLoading(true);
+    setShowCamera(true);
+    setPhotoError(null);
 
     setTimeout(() => {
-      setCameraLoading(false)
-      setCameraReady(true)
-    }, 1000)
+      setCameraLoading(false);
+      setCameraReady(true);
+    }, 1000);
   }
 
   const capturePhoto = async () => {
@@ -179,6 +203,14 @@ const VisitorRegistration = () => {
     if (!formData.company.trim()) newErrors.company = 'Empresa é obrigatória'
     if (!formData.visitReason.trim()) newErrors.visitReason = 'Motivo da visita é obrigatório'
 
+    // Validação de campos de endereço obrigatórios
+    if (!formData.cep.trim()) newErrors.cep = 'CEP é obrigatório'
+    if (!formData.rua.trim()) newErrors.rua = 'Rua/Avenida é obrigatório'
+    if (!formData.numero.trim()) newErrors.numero = 'Número é obrigatório'
+    if (!formData.bairro.trim()) newErrors.bairro = 'Bairro é obrigatório'
+    if (!formData.cidade.trim()) newErrors.cidade = 'Cidade é obrigatória'
+    if (!formData.uf.trim()) newErrors.uf = 'UF é obrigatório'
+
     // Validação de documento principal
     if (!primaryDocument) {
       newErrors.document = 'Selecione um documento principal'
@@ -192,10 +224,8 @@ const VisitorRegistration = () => {
     // if (formData.sectors.length === 0) newErrors.sectors = 'Selecione pelo menos um setor'
     // if (formData.departments.length === 0) newErrors.departments = 'Selecione pelo menos um departamento'
 
-    // Validação da foto
-    if (!formData.photo) {
-      newErrors.photo = 'Foto é obrigatória'
-    } else if (!faceDetected) {
+    // Validação da foto - agora opcional
+    if (formData.photo && !faceDetected) {
       newErrors.photo = 'A foto deve conter um rosto visível'
     }
 
@@ -217,12 +247,23 @@ const VisitorRegistration = () => {
       // Prepara os dados do visitante
       const visitorData = {
         name: formData.name,
+        nomeSocial: formData.nomeSocial,
         email: formData.email,
         phone: formData.phone,
         company: formData.company,
         visitReason: formData.visitReason,
         notes: formData.notes,
         photo: formData.photo,
+        // Dados de endereço
+        endereco: {
+          cep: formData.cep,
+          rua: formData.rua,
+          numero: formData.numero,
+          complemento: formData.complemento,
+          bairro: formData.bairro,
+          cidade: formData.cidade,
+          uf: formData.uf
+        },
         // Removido: sectors: formData.sectors,
         // Removido: departments: formData.departments,
         documents: {}
@@ -266,6 +307,7 @@ const VisitorRegistration = () => {
   const resetForm = () => {
     setFormData({
       name: '',
+      nomeSocial: '',
       email: '',
       phone: '',
       cpf: '',
@@ -274,7 +316,15 @@ const VisitorRegistration = () => {
       company: '',
       notes: '',
       photo: null,
-      visitReason: ''
+      visitReason: '',
+      // Novos campos de endereço
+      cep: '',
+      rua: '',
+      numero: '',
+      complemento: '',
+      bairro: '',
+      cidade: '',
+      uf: ''
       // Removido: sectors: [],
       // Removido: departments: []
     })
@@ -315,7 +365,7 @@ const VisitorRegistration = () => {
               {/* Photo Section */}
               <div className="lg:col-span-1">
                 <div className="space-y-4">
-                  <h3 className="text-md font-medium text-gray-700 dark:text-gray-300">Foto</h3>
+                  <h3 className="text-md font-medium text-gray-700 dark:text-gray-300">Foto (opcional)</h3>
                   <div className="flex flex-col items-center justify-center space-y-4">
                     {!showCamera && !capturedImage && (
                       <div className="flex flex-col items-center justify-center space-y-4">
@@ -336,8 +386,8 @@ const VisitorRegistration = () => {
                     {showCamera && (
                       <div className="space-y-4">
                         {cameraLoading ? (
-                          <div className="h-48 w-48 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-                            <LoadingSpinner size="lg" />
+                          <div className="flex justify-center items-center h-48 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                            <LoadingSpinner size="md" />
                           </div>
                         ) : (
                           <div className="relative">
@@ -346,21 +396,18 @@ const VisitorRegistration = () => {
                               ref={webcamRef}
                               screenshotFormat="image/jpeg"
                               videoConstraints={{
-                                width: 300,
-                                height: 300,
-                                facingMode: 'user',
-                                deviceId: selectedCameraId ? { exact: selectedCameraId } : undefined
+                                deviceId: selectedCameraId,
+                                facingMode: 'user'
                               }}
-                              className="rounded-lg"
-                              onUserMedia={() => setCameraReady(true)}
+                              className="w-full rounded-lg"
                               onUserMediaError={(error) => {
-                                console.error('Erro na webcam:', error)
-                                setPhotoError('Erro ao acessar a câmera. Por favor, verifique as permissões e tente novamente.')
-                                setShowCamera(false)
+                                console.error('Erro ao acessar câmera:', error);
+                                setPhotoError(`Erro ao acessar câmera: ${error.message || 'Verifique se a câmera está conectada e funcionando'}. Como a foto é opcional, você pode continuar o cadastro sem ela.`);
+                                setShowCamera(false);
                               }}
                             />
                             {availableCameras.length > 1 && (
-                              <div className="absolute top-2 right-2">
+                              <div className="absolute bottom-2 right-2">
                                 <select
                                   value={selectedCameraId}
                                   onChange={(e) => setSelectedCameraId(e.target.value)}
@@ -468,6 +515,27 @@ const VisitorRegistration = () => {
                     {errors.name && (
                       <p className="mt-1 text-sm text-red-600 dark:text-red-500">{errors.name}</p>
                     )}
+                  </div>
+
+                  {/* Nome Social (opcional) */}
+                  <div>
+                    <label htmlFor="nomeSocial" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Nome Social (opcional)
+                    </label>
+                    <div className="mt-1 relative rounded-md shadow-sm">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <User className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        type="text"
+                        name="nomeSocial"
+                        id="nomeSocial"
+                        value={formData.nomeSocial}
+                        onChange={handleChange}
+                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white dark:border-gray-600 dark:focus:ring-primary-500 dark:focus:border-primary-500"
+                        placeholder="Nome social do visitante (se aplicável)"
+                      />
+                    </div>
                   </div>
 
                   {/* Email */}
@@ -750,22 +818,216 @@ const VisitorRegistration = () => {
                     </div>
                   </div>
 
+                  {/* Endereço Section */}
+                  <div className="mt-8 bg-white dark:bg-gray-800 shadow rounded-lg p-6 space-y-6">
+                    <h3 className="text-md font-medium text-gray-700 dark:text-gray-300">Endereço</h3>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* CEP */}
+                      <div>
+                        <label htmlFor="cep" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          CEP *
+                        </label>
+                        <div className="mt-1 relative rounded-md shadow-sm">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <MapPin className="h-5 w-5 text-gray-400" />
+                          </div>
+                          <input
+                            type="text"
+                            name="cep"
+                            id="cep"
+                            value={formData.cep}
+                            onChange={handleChange}
+                            className={`block w-full pl-10 pr-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-1 dark:bg-gray-700 dark:text-white dark:border-gray-600 ${errors.cep
+                              ? 'border-red-300 focus:ring-red-500 focus:border-red-500 dark:border-red-700 dark:focus:ring-red-500 dark:focus:border-red-700'
+                              : 'border-gray-300 focus:ring-primary-500 focus:border-primary-500 dark:focus:ring-primary-500 dark:focus:border-primary-500'
+                              }`}
+                            placeholder="00000-000"
+                            maxLength={9}
+                          />
+                        </div>
+                        {errors.cep && (
+                          <p className="mt-1 text-sm text-red-600 dark:text-red-500">{errors.cep}</p>
+                        )}
+                      </div>
+
+                      {/* Rua/Avenida */}
+                      <div className="md:col-span-2">
+                        <label htmlFor="rua" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Rua / Avenida *
+                        </label>
+                        <div className="mt-1 relative rounded-md shadow-sm">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <MapPin className="h-5 w-5 text-gray-400" />
+                          </div>
+                          <input
+                            type="text"
+                            name="rua"
+                            id="rua"
+                            value={formData.rua}
+                            onChange={handleChange}
+                            className={`block w-full pl-10 pr-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-1 dark:bg-gray-700 dark:text-white dark:border-gray-600 ${errors.rua
+                              ? 'border-red-300 focus:ring-red-500 focus:border-red-500 dark:border-red-700 dark:focus:ring-red-500 dark:focus:border-red-700'
+                              : 'border-gray-300 focus:ring-primary-500 focus:border-primary-500 dark:focus:ring-primary-500 dark:focus:border-primary-500'
+                              }`}
+                            placeholder="Nome da rua ou avenida"
+                          />
+                        </div>
+                        {errors.rua && (
+                          <p className="mt-1 text-sm text-red-600 dark:text-red-500">{errors.rua}</p>
+                        )}
+                      </div>
+
+                      {/* Número */}
+                      <div>
+                        <label htmlFor="numero" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Número *
+                        </label>
+                        <div className="mt-1 relative rounded-md shadow-sm">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Hash className="h-5 w-5 text-gray-400" />
+                          </div>
+                          <input
+                            type="text"
+                            name="numero"
+                            id="numero"
+                            value={formData.numero}
+                            onChange={handleChange}
+                            className={`block w-full pl-10 pr-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-1 dark:bg-gray-700 dark:text-white dark:border-gray-600 ${errors.numero
+                              ? 'border-red-300 focus:ring-red-500 focus:border-red-500 dark:border-red-700 dark:focus:ring-red-500 dark:focus:border-red-700'
+                              : 'border-gray-300 focus:ring-primary-500 focus:border-primary-500 dark:focus:ring-primary-500 dark:focus:border-primary-500'
+                              }`}
+                            placeholder="Número"
+                          />
+                        </div>
+                        {errors.numero && (
+                          <p className="mt-1 text-sm text-red-600 dark:text-red-500">{errors.numero}</p>
+                        )}
+                      </div>
+
+                      {/* Complemento */}
+                      <div>
+                        <label htmlFor="complemento" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Complemento (opcional)
+                        </label>
+                        <div className="mt-1 relative rounded-md shadow-sm">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Home className="h-5 w-5 text-gray-400" />
+                          </div>
+                          <input
+                            type="text"
+                            name="complemento"
+                            id="complemento"
+                            value={formData.complemento}
+                            onChange={handleChange}
+                            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white dark:border-gray-600 dark:focus:ring-primary-500 dark:focus:border-primary-500"
+                            placeholder="Apartamento, sala, etc."
+                          />
+                        </div>
+                      </div>
+
+                      {/* Bairro */}
+                      <div>
+                        <label htmlFor="bairro" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Bairro *
+                        </label>
+                        <div className="mt-1 relative rounded-md shadow-sm">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <MapPin className="h-5 w-5 text-gray-400" />
+                          </div>
+                          <input
+                            type="text"
+                            name="bairro"
+                            id="bairro"
+                            value={formData.bairro}
+                            onChange={handleChange}
+                            className={`block w-full pl-10 pr-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-1 dark:bg-gray-700 dark:text-white dark:border-gray-600 ${errors.bairro
+                              ? 'border-red-300 focus:ring-red-500 focus:border-red-500 dark:border-red-700 dark:focus:ring-red-500 dark:focus:border-red-700'
+                              : 'border-gray-300 focus:ring-primary-500 focus:border-primary-500 dark:focus:ring-primary-500 dark:focus:border-primary-500'
+                              }`}
+                            placeholder="Bairro"
+                          />
+                        </div>
+                        {errors.bairro && (
+                          <p className="mt-1 text-sm text-red-600 dark:text-red-500">{errors.bairro}</p>
+                        )}
+                      </div>
+
+                      {/* Cidade */}
+                      <div>
+                        <label htmlFor="cidade" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Cidade *
+                        </label>
+                        <div className="mt-1 relative rounded-md shadow-sm">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Building className="h-5 w-5 text-gray-400" />
+                          </div>
+                          <input
+                            type="text"
+                            name="cidade"
+                            id="cidade"
+                            value={formData.cidade}
+                            onChange={handleChange}
+                            className={`block w-full pl-10 pr-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-1 dark:bg-gray-700 dark:text-white dark:border-gray-600 ${errors.cidade
+                              ? 'border-red-300 focus:ring-red-500 focus:border-red-500 dark:border-red-700 dark:focus:ring-red-500 dark:focus:border-red-700'
+                              : 'border-gray-300 focus:ring-primary-500 focus:border-primary-500 dark:focus:ring-primary-500 dark:focus:border-primary-500'
+                              }`}
+                            placeholder="Cidade"
+                          />
+                        </div>
+                        {errors.cidade && (
+                          <p className="mt-1 text-sm text-red-600 dark:text-red-500">{errors.cidade}</p>
+                        )}
+                      </div>
+
+                      {/* UF */}
+                      <div>
+                        <label htmlFor="uf" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          UF (estado) *
+                        </label>
+                        <div className="mt-1 relative rounded-md shadow-sm">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Map className="h-5 w-5 text-gray-400" />
+                          </div>
+                          <input
+                            type="text"
+                            name="uf"
+                            id="uf"
+                            value={formData.uf}
+                            onChange={handleChange}
+                            className={`block w-full pl-10 pr-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-1 dark:bg-gray-700 dark:text-white dark:border-gray-600 ${errors.uf
+                              ? 'border-red-300 focus:ring-red-500 focus:border-red-500 dark:border-red-700 dark:focus:ring-red-500 dark:focus:border-red-700'
+                              : 'border-gray-300 focus:ring-primary-500 focus:border-primary-500 dark:focus:ring-primary-500 dark:focus:border-primary-500'
+                              }`}
+                            placeholder="UF"
+                            maxLength={2}
+                          />
+                        </div>
+                        {errors.uf && (
+                          <p className="mt-1 text-sm text-red-600 dark:text-red-500">{errors.uf}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Submit Button */}
-                  <div className="flex justify-end">
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="inline-flex items-center px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {loading ? (
-                        <LoadingSpinner size="sm" color="white" />
-                      ) : (
-                        <>
-                          <Save className="h-5 w-5 mr-2" />
-                          Salvar Visitante
-                        </>
-                      )}
-                    </button>
+                  <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+                    <div className="flex justify-end">
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="inline-flex items-center px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {loading ? (
+                          <LoadingSpinner size="sm" color="white" />
+                        ) : (
+                          <>
+                            <Save className="h-5 w-5 mr-2" />
+                            Salvar Visitante
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

@@ -36,9 +36,18 @@ class VisitorService {
       if (decrypted[field]) {
         try {
           const bytes = CryptoJS.AES.decrypt(decrypted[field], this.secretKey)
-          decrypted[field] = bytes.toString(CryptoJS.enc.Utf8)
+          const decryptedValue = bytes.toString(CryptoJS.enc.Utf8)
+          // Verifica se a descriptografia resultou em uma string válida
+          if (decryptedValue) {
+            decrypted[field] = decryptedValue
+          } else {
+            // Se a descriptografia falhar ou retornar vazio, define como string vazia para evitar quebrar a UI
+            console.warn(`Malformed UTF-8 data for field ${field} after decryption. Setting to empty string.`)
+            decrypted[field] = ''
+          }
         } catch (error) {
           console.error(`Error decrypting ${field}:`, error)
+          decrypted[field] = '' // Define como string vazia em caso de exceção na descriptografia
         }
       }
     })
@@ -54,17 +63,29 @@ class VisitorService {
       const missingFields = requiredFields.filter(field => !visitorData[field])
 
       // Validar documento principal (pelo menos um deve estar preenchido)
-      const hasDocument = visitorData.cpf || visitorData.rg || visitorData.cnh
+      const hasDocument = (
+        // Verifica documentos dentro do objeto documents
+        (visitorData.documents && (
+          (visitorData.documents.cpf && visitorData.documents.cpf.toString().trim()) ||
+          (visitorData.documents.rg && visitorData.documents.rg.toString().trim()) ||
+          (visitorData.documents.cnh && visitorData.documents.cnh.toString().trim())
+        )) ||
+        // Verifica documentos no nível raiz (compatibilidade)
+        (visitorData.cpf && visitorData.cpf.toString().trim()) ||
+        (visitorData.rg && visitorData.rg.toString().trim()) ||
+        (visitorData.cnh && visitorData.cnh.toString().trim())
+      )
+
       if (!hasDocument) {
         missingFields.push('documento (CPF, RG ou CNH)')
       }
 
-      // Validar se pelo menos um setor ou departamento foi selecionado
-      const hasSectorOrDepartment = (visitorData.sectors && visitorData.sectors.length > 0) ||
-        (visitorData.departments && visitorData.departments.length > 0)
-      if (!hasSectorOrDepartment) {
-        missingFields.push('setor ou departamento')
-      }
+      // Removida validação de setor ou departamento que não existem mais na interface
+      // const hasSectorOrDepartment = (visitorData.sectors && visitorData.sectors.length > 0) ||
+      //   (visitorData.departments && visitorData.departments.length > 0)
+      // if (!hasSectorOrDepartment) {
+      //   missingFields.push('setor ou departamento')
+      // }
 
       if (missingFields.length > 0) {
         throw new Error(`Campos obrigatórios não preenchidos: ${missingFields.join(', ')}`)

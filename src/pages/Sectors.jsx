@@ -19,15 +19,17 @@ import {
   CheckCircle,
   XCircle,
   Image,
-  FileText
+  FileText,
+  Table
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { toast } from 'react-hot-toast'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 const Sectors = () => {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [sectors, setSectors] = useState([])
   const [filteredSectors, setFilteredSectors] = useState([])
   const [loading, setLoading] = useState(true)
@@ -322,6 +324,13 @@ const Sectors = () => {
                           title="Excluir"
                         >
                           <Trash2 className="h-5 w-5" />
+                        </button>
+                        <button
+                          onClick={() => navigate(`/tabelagabinete/${sector.id}`)}
+                          className="text-indigo-600 hover:text-indigo-900"
+                          title="Visualizar Servidores"
+                        >
+                          <Table className="h-5 w-5" />
                         </button>
                       </div>
                     </td>

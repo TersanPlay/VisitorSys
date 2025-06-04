@@ -5,7 +5,6 @@ import { Camera, User, Building, FileText, CheckCircle, ArrowLeft, ArrowRight } 
 import { faceRecognitionService } from '../services/faceRecognitionService';
 import { visitorService } from '../services/visitorService';
 import { departmentService } from '../services/departmentService';
-import { sectorService } from '../services/sectorService';
 import { cameraService } from '../services/cameraService';
 
 const TotemPage = () => {
@@ -21,13 +20,11 @@ const TotemPage = () => {
     purpose: '',
     notes: '',
     department: '',
-    sector: ''
   });
   const [photo, setPhoto] = useState(null);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [departments, setDepartments] = useState([]);
-  const [sectors, setSectors] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraPermissions, setCameraPermissions] = useState(null);
@@ -62,7 +59,6 @@ const TotemPage = () => {
 
         // Load departments and sectors
         loadDepartments();
-        loadSectors();
 
         // Select physical camera first
         await selectPhysicalCamera();
@@ -519,7 +515,6 @@ const TotemPage = () => {
         if (!formData.company.trim()) newErrors.company = 'Empresa é obrigatória';
         if (!formData.purpose.trim()) newErrors.purpose = 'Motivo da visita é obrigatório';
         if (!formData.department) newErrors.department = 'Departamento é obrigatório';
-        if (!formData.sector) newErrors.sector = 'Setor é obrigatório';
         break;
     }
 
@@ -550,7 +545,6 @@ const TotemPage = () => {
         purpose: '',
         notes: '',
         department: '',
-        sector: ''
       });
 
       // Pular para etapa de informações da visita
@@ -679,7 +673,6 @@ const TotemPage = () => {
       purpose: '',
       notes: '',
       department: '',
-      sector: ''
     });
     setPhoto(null);
     setErrors({});
@@ -816,7 +809,7 @@ const TotemPage = () => {
                     <div className="mt-7">
                       {faceDetection.detected ? (
                         <div className={`p-5 rounded-xl border-2 transition-all duration-300 ${faceDetection.distance === 'good'
-                          ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-400 text-green-800'
+                          ? 'bg-gradient-to-r from-green-500 to-emerald-50 border-green-400 text-green-800'
                           : faceDetection.distance === 'close'
                             ? 'bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-400 text-yellow-800'
                             : 'bg-gradient-to-r from-red-50 to-pink-50 border-red-400 text-red-800'
@@ -1265,25 +1258,7 @@ const TotemPage = () => {
           {errors.department && <p className="text-red-600 text-sm mt-1">{errors.department}</p>}
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Setor *
-          </label>
-          <select
-            value={formData.sector}
-            onChange={(e) => handleInputChange('sector', e.target.value)}
-            className={`w-full px-4 py-4 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[50px] text-lg ${errors.sector ? 'border-red-500' : 'border-gray-300'
-              }`}
-          >
-            <option value="">Selecione um setor</option>
-            {sectors.map((sector) => (
-              <option key={sector.id} value={sector.id}>
-                {sector.name}
-              </option>
-            ))}
-          </select>
-          {errors.sector && <p className="text-red-600 text-sm mt-1">{errors.sector}</p>}
-        </div>
+        {/* O campo de setor foi removido daqui */}
 
         <div className="md:col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1345,7 +1320,6 @@ const TotemPage = () => {
           <p><strong>Empresa:</strong> {formData.company}</p>
           <p><strong>Motivo:</strong> {formData.purpose}</p>
           <p><strong>Departamento:</strong> {departments.find(d => d.id === formData.department)?.name}</p>
-          <p><strong>Setor:</strong> {sectors.find(s => s.id === formData.sector)?.name}</p>
         </div>
       </div>
 

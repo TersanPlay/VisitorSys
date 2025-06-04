@@ -24,7 +24,6 @@ export async function initDatabase() {
 
       // Inicializar com dados padrão se necessário
       dbService.setItem('departments', []);
-      dbService.setItem('sectors', []);
       dbService.setItem('visitors', []);
       dbService.setItem('visits', []);
 

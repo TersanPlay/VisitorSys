@@ -24,7 +24,6 @@ const DepartmentList = () => {
   const [showDetailsDialog, setShowDetailsDialog] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [currentDepartment, setCurrentDepartment] = useState(null)
-  const [linkedSectors, setLinkedSectors] = useState([])
 
   // Carregar departamentos
   useEffect(() => {
@@ -62,22 +61,10 @@ const DepartmentList = () => {
     }
   }
 
-  // Carregar setores vinculados a um departamento
-  const loadLinkedSectors = async (departmentId) => {
-    try {
-      const sectors = await departmentService.getLinkedSectors(departmentId)
-      setLinkedSectors(sectors)
-    } catch (error) {
-      console.error('Erro ao carregar setores vinculados:', error)
-      toast.error('Não foi possível carregar os setores vinculados')
-      setLinkedSectors([])
-    }
-  }
 
   // Abrir diálogo de detalhes do departamento
   const handleViewDetails = async (department) => {
     setCurrentDepartment(department)
-    await loadLinkedSectors(department.id)
     setShowDetailsDialog(true)
   }
 
@@ -261,7 +248,6 @@ const DepartmentList = () => {
                 <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="info">Informações</TabsTrigger>
                   <TabsTrigger value="contact">Contato</TabsTrigger>
-                  <TabsTrigger value="sectors">Setores</TabsTrigger>
                 </TabsList>
 
                 {/* Aba de Informações */}
@@ -388,37 +374,6 @@ const DepartmentList = () => {
                   </div>
                 </TabsContent>
 
-                {/* Aba de Setores */}
-                <TabsContent value="sectors" className="space-y-4 pt-4">
-                  {linkedSectors.length > 0 ? (
-                    <div className="space-y-2">
-                      {linkedSectors.map(sector => (
-                        <Card key={sector.id}>
-                          <CardContent className="p-4">
-                            <div className="flex justify-between items-center">
-                              <div>
-                                <h4 className="font-medium">{sector.name}</h4>
-                                {sector.code && <p className="text-sm text-muted-foreground">Código: {sector.code}</p>}
-                              </div>
-                              {sector.status && (
-                                <Badge variant={sector.status === 'active' ? 'success' : 'secondary'}>
-                                  {sector.status === 'active' ? 'Ativo' : 'Inativo'}
-                                </Badge>
-                              )}
-                            </div>
-                            {sector.description && (
-                              <p className="text-sm mt-2">{sector.description}</p>
-                            )}
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      Nenhum setor vinculado a este departamento.
-                    </div>
-                  )}
-                </TabsContent>
               </Tabs>
             </div>
           )}

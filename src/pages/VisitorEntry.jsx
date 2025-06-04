@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { visitorService } from '../services/visitorService'
 import { departmentService } from '../services/departmentService'
-import { sectorService } from '../services/sectorService'
 import LoadingSpinner from '../components/UI/LoadingSpinner'
 import {
   Plus,
@@ -40,9 +39,7 @@ const VisitorEntry = () => {
   const [selectedVisitor, setSelectedVisitor] = useState(null)
   const [visitorSearchTerm, setVisitorSearchTerm] = useState('')
   const [filteredVisitorResults, setFilteredVisitorResults] = useState([])
-  const [selectionType, setSelectionType] = useState('departments') // 'departments' ou 'sectors'
   const [availableDepartments, setAvailableDepartments] = useState([])
-  const [availableSectors, setAvailableSectors] = useState([])
 
   // Estado para o modal de confirmação de saída
   const [showExitModal, setShowExitModal] = useState(false)
@@ -54,14 +51,13 @@ const VisitorEntry = () => {
     purpose: '',
     description: '',
     departments: [],
-    sectors: []
   })
   const [errors, setErrors] = useState({})
 
   useEffect(() => {
     loadVisitors()
     loadActiveVisits()
-    loadSectorsAndDepartments()
+    loadDepartments()
   }, [])
 
   useEffect(() => {
@@ -99,17 +95,16 @@ const VisitorEntry = () => {
     }
   }
 
-  const loadSectorsAndDepartments = async () => {
+  const loadDepartments = async () => {
     try {
-      const sectors = await sectorService.getAllSectors()
       const departments = await departmentService.getAllDepartments()
-      setAvailableSectors(sectors)
       setAvailableDepartments(departments)
     } catch (error) {
-      console.error('Error loading sectors and departments:', error)
-      toast.error('Erro ao carregar setores e departamentos')
+      console.error('Error loading departments:', error)
+      toast.error('Erro ao carregar departamentos')
     }
   }
+
 
   const filterVisitors = () => {
     let filtered = [...visitors]
@@ -193,9 +188,6 @@ const VisitorEntry = () => {
       newErrors.departments = 'Selecione pelo menos um departamento'
     }
 
-    if (selectionType === 'sectors' && (!visitData.sectors || visitData.sectors.length === 0)) {
-      newErrors.sectors = 'Selecione pelo menos um setor'
-    }
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -218,7 +210,6 @@ const VisitorEntry = () => {
         notes: visitData.description || '',
         purpose: visitData.purpose,
         departments: selectionType === 'departments' ? visitData.departments : [],
-        sectors: selectionType === 'sectors' ? visitData.sectors : []
       }
 
       await visitorService.startVisit(selectedVisitor.id, entryData)
@@ -229,7 +220,7 @@ const VisitorEntry = () => {
         purpose: '',
         description: '',
         departments: [],
-        sectors: []
+        // sectors: [], // Removido campo de setores
       })
       loadActiveVisits()
     } catch (error) {
@@ -574,40 +565,7 @@ const VisitorEntry = () => {
 
                       {selectedVisitor && (
                         <>
-                          {/* Selection Type */}
-                          <div>
-                            <label className="block text-base font-medium text-gray-700 mb-1">
-                              Tipo de Seleção
-                            </label>
-                            <div className="flex space-x-4">
-                              <div className="flex items-center">
-                                <input
-                                  id="departments-radio"
-                                  name="selection-type"
-                                  type="radio"
-                                  checked={selectionType === 'departments'}
-                                  onChange={() => setSelectionType('departments')}
-                                  className="focus:ring-primary-500 h-4 w-4 text-primary-600 border-gray-300"
-                                />
-                                <label htmlFor="departments-radio" className="ml-2 block text-base text-gray-700">
-                                  Departamentos
-                                </label>
-                              </div>
-                              <div className="flex items-center">
-                                <input
-                                  id="sectors-radio"
-                                  name="selection-type"
-                                  type="radio"
-                                  checked={selectionType === 'sectors'}
-                                  onChange={() => setSelectionType('sectors')}
-                                  className="focus:ring-primary-500 h-4 w-4 text-primary-600 border-gray-300"
-                                />
-                                <label htmlFor="sectors-radio" className="ml-2 block text-base text-gray-700">
-                                  Setores
-                                </label>
-                              </div>
-                            </div>
-                          </div>
+                          {/* Removida seleção de tipo de destino (setores/departamentos) */}
 
                           {/* Purpose */}
                           <div>
@@ -641,70 +599,38 @@ const VisitorEntry = () => {
                             )}
                           </div>
 
-                          {/* Departments or Sectors */}
-                          {selectionType === 'departments' ? (
-                            <div>
-                              <label htmlFor="departments" className="block text-base font-medium text-gray-700">
-                                Departamentos a visitar *
-                              </label>
-                              <div className="mt-1">
-                                <select
-                                  id="departments"
-                                  name="departments"
-                                  multiple
-                                  value={visitData.departments}
-                                  onChange={handleMultiSelectChange}
-                                  className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-1 text-base ${errors.departments
-                                    ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
-                                    : 'border-gray-300 focus:ring-primary-500 focus:border-primary-500'}`}
-                                  size="5"
-                                >
-                                  {availableDepartments.map((department) => (
-                                    <option key={department.id} value={department.id}>
-                                      {department.name}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-                              {visitData.departments.length > 0 && (
-                                <p className="mt-1 text-sm text-gray-600">Selecionados: {visitData.departments.length}</p>
-                              )}
-                              {errors.departments && (
-                                <p className="mt-1 text-sm text-red-600">{errors.departments}</p>
-                              )}
+                          {/* Departments */}
+                          <div>
+                            <label htmlFor="departments" className="block text-base font-medium text-gray-700">
+                              Departamentos a visitar *
+                            </label>
+                            <div className="mt-1">
+                              <select
+                                id="departments"
+                                name="departments"
+                                multiple
+                                value={visitData.departments}
+                                onChange={handleMultiSelectChange}
+                                className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-1 text-base ${errors.departments
+                                  ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
+                                  : 'border-gray-300 focus:ring-primary-500 focus:border-primary-500'}`}
+                                size="5"
+                              >
+                                {availableDepartments.map((department) => (
+                                  <option key={department.id} value={department.id}>
+                                    {department.name}
+                                  </option>
+                                ))}
+                              </select>
                             </div>
-                          ) : (
-                            <div>
-                              <label htmlFor="sectors" className="block text-base font-medium text-gray-700">
-                                Setores a visitar *
-                              </label>
-                              <div className="mt-1">
-                                <select
-                                  id="sectors"
-                                  name="sectors"
-                                  multiple
-                                  value={visitData.sectors}
-                                  onChange={handleMultiSelectChange}
-                                  className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-1 text-base ${errors.sectors
-                                    ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
-                                    : 'border-gray-300 focus:ring-primary-500 focus:border-primary-500'}`}
-                                  size="5"
-                                >
-                                  {availableSectors.map((sector) => (
-                                    <option key={sector.id} value={sector.id}>
-                                      {sector.name}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-                              {visitData.sectors.length > 0 && (
-                                <p className="mt-1 text-sm text-gray-600">Selecionados: {visitData.sectors.length}</p>
-                              )}
-                              {errors.sectors && (
-                                <p className="mt-1 text-sm text-red-600">{errors.sectors}</p>
-                              )}
-                            </div>
-                          )}
+                            {visitData.departments.length > 0 && (
+                              <p className="mt-1 text-sm text-gray-600">Selecionados: {visitData.departments.length}</p>
+                            )}
+                            {errors.departments && (
+                              <p className="mt-1 text-sm text-red-600">{errors.departments}</p>
+                            )}
+                          </div>
+                          {/* Removida seleção de setores */}
 
                           {/* Description */}
                           <div>
@@ -752,7 +678,7 @@ const VisitorEntry = () => {
                       purpose: '',
                       description: '',
                       departments: [],
-                      sectors: []
+                      // sectors: [], // Removido campo de setores
                     })
                     setErrors({})
                   }}

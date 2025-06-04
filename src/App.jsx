@@ -9,9 +9,6 @@ import VisitorRegistration from './pages/VisitorRegistration'
 import Visitors from './pages/Visitors'
 import VisitorEntry from './pages/VisitorEntry'
 import Reports from './pages/Reports'
-import Sectors from './pages/Sectors'
-import SectorForm from './pages/SectorForm'
-import SectorSeederPage from './pages/SectorSeederPage'
 import DepartmentList from './pages/DepartmentList'
 import DepartmentForm from './pages/DepartmentForm'
 import TabelaGabinete from './pages/TabelaGabinete'
@@ -55,10 +52,6 @@ function App() {
                     <Route path="/visitors/register" element={<VisitorRegistration />} />
                     <Route path="/visitors/list" element={<Visitors />} />
                     <Route path="/visitors/entry" element={<VisitorEntry />} />
-                    <Route path="/sectors" element={<Sectors />} />
-                    <Route path="/sectors/add" element={<SectorForm />} />
-                    <Route path="/sectors/:id/edit" element={<SectorForm />} />
-                    <Route path="/sectors/seeder" element={<SectorSeederPage />} />
                     <Route path="/departments" element={<DepartmentList />} />
                     <Route path="/departments/add" element={<DepartmentForm />} />
                     <Route path="/departments/:id/edit" element={<DepartmentForm />} />

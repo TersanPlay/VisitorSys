@@ -1,12 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { toast } from 'react-hot-toast'
 import Webcam from 'react-webcam'
-import { Camera, RefreshCw, Check, X, Save, Building, User, Mail, Phone, FileText, Briefcase, MessageSquare, MapPin, Hash, Home, Map } from 'lucide-react'
+import { RefreshCw, Save, Building, Mail, Phone, FileText, Briefcase, MessageSquare, MapPin, Hash, Home, Map, User } from 'lucide-react'
+import PhotoCaptureSection from '../components/VisitorRegistration/PhotoCaptureSection';
 import { useAuth } from '../contexts/AuthContext'
 import { visitorService } from '../services/visitorService'
 import { faceRecognitionService } from '../services/faceRecognitionService'
 import { cameraService } from '../services/cameraService'
-// Removidas as importações dos serviços de setores e departamentos
 import LoadingSpinner from '../components/UI/LoadingSpinner'
 import { useNavigate } from 'react-router-dom'
 
@@ -47,18 +47,15 @@ const VisitorRegistration = () => {
     bairro: '',
     cidade: '',
     uf: ''
-    // Removido: sectors: [], departments: []
   })
   const [errors, setErrors] = useState({})
   const [showCpf, setShowCpf] = useState(false)
   const [showRg, setShowRg] = useState(false)
   const [primaryDocument, setPrimaryDocument] = useState('')
   const [showOptionalDocuments, setShowOptionalDocuments] = useState(false)
-  // Removido: const [availableSectors, setAvailableSectors] = useState([])
   // Removido: const [availableDepartments, setAvailableDepartments] = useState([])
 
   useEffect(() => {
-    // Removido: loadSectors()
     // Removido: loadDepartments()
     checkCameraPermissions()
     loadCameras()
@@ -82,8 +79,8 @@ const VisitorRegistration = () => {
         setAvailableCameras([]);
         return;
       }
-      
-      const cameras = await cameraService.getAvailableCameras();
+
+      const cameras = await cameraService.enumerateDevices();
       setAvailableCameras(cameras);
       if (cameras.length > 0) {
         setSelectedCameraId(cameras[0].deviceId);
@@ -95,7 +92,6 @@ const VisitorRegistration = () => {
     }
   }
 
-  // Removido: const loadSectors = async () => { ... }
   // Removido: const loadDepartments = async () => { ... }
 
   const handleChange = (e) => {
@@ -118,7 +114,7 @@ const VisitorRegistration = () => {
       setPhotoError('Este navegador não suporta acesso à câmera. Como a foto é opcional, você pode continuar o cadastro sem ela.');
       return;
     }
-    
+
     if (!cameraPermissions) {
       try {
         const granted = await cameraService.requestPermissions();
@@ -220,9 +216,6 @@ const VisitorRegistration = () => {
       newErrors.cnh = 'CNH é obrigatória'
     }
 
-    // Removido: Validação de setores e departamentos
-    // if (formData.sectors.length === 0) newErrors.sectors = 'Selecione pelo menos um setor'
-    // if (formData.departments.length === 0) newErrors.departments = 'Selecione pelo menos um departamento'
 
     // Validação da foto - agora opcional
     if (formData.photo && !faceDetected) {
@@ -264,7 +257,6 @@ const VisitorRegistration = () => {
           cidade: formData.cidade,
           uf: formData.uf
         },
-        // Removido: sectors: formData.sectors,
         // Removido: departments: formData.departments,
         documents: {}
       }
@@ -325,7 +317,6 @@ const VisitorRegistration = () => {
       bairro: '',
       cidade: '',
       uf: ''
-      // Removido: sectors: [],
       // Removido: departments: []
     })
     setPrimaryDocument('')
@@ -364,125 +355,25 @@ const VisitorRegistration = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Photo Section */}
               <div className="lg:col-span-1">
-                <div className="space-y-4">
-                  <h3 className="text-md font-medium text-gray-700 dark:text-gray-300">Foto (opcional)</h3>
-                  <div className="flex flex-col items-center justify-center space-y-4">
-                    {!showCamera && !capturedImage && (
-                      <div className="flex flex-col items-center justify-center space-y-4">
-                        <div className="h-48 w-48 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-                          <User className="h-24 w-24 text-gray-300 dark:text-gray-500" />
-                        </div>
-                        <button
-                          type="button"
-                          onClick={openCamera}
-                          className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                        >
-                          <Camera className="h-4 w-4 mr-2" />
-                          Abrir Câmera
-                        </button>
-                      </div>
-                    )}
-
-                    {showCamera && (
-                      <div className="space-y-4">
-                        {cameraLoading ? (
-                          <div className="flex justify-center items-center h-48 bg-gray-100 dark:bg-gray-800 rounded-lg">
-                            <LoadingSpinner size="md" />
-                          </div>
-                        ) : (
-                          <div className="relative">
-                            <Webcam
-                              audio={false}
-                              ref={webcamRef}
-                              screenshotFormat="image/jpeg"
-                              videoConstraints={{
-                                deviceId: selectedCameraId,
-                                facingMode: 'user'
-                              }}
-                              className="w-full rounded-lg"
-                              onUserMediaError={(error) => {
-                                console.error('Erro ao acessar câmera:', error);
-                                setPhotoError(`Erro ao acessar câmera: ${error.message || 'Verifique se a câmera está conectada e funcionando'}. Como a foto é opcional, você pode continuar o cadastro sem ela.`);
-                                setShowCamera(false);
-                              }}
-                            />
-                            {availableCameras.length > 1 && (
-                              <div className="absolute bottom-2 right-2">
-                                <select
-                                  value={selectedCameraId}
-                                  onChange={(e) => setSelectedCameraId(e.target.value)}
-                                  className="text-xs bg-gray-800 bg-opacity-75 text-white rounded px-2 py-1"
-                                >
-                                  {availableCameras.map((camera) => (
-                                    <option key={camera.deviceId} value={camera.deviceId}>
-                                      {camera.label || `Câmera ${camera.deviceId.slice(0, 5)}...`}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        <div className="flex space-x-2">
-                          <button
-                            type="button"
-                            onClick={capturePhoto}
-                            disabled={isCapturing || cameraLoading}
-                            className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {isCapturing ? (
-                              <LoadingSpinner size="sm" color="white" />
-                            ) : (
-                              <>
-                                <Camera className="h-4 w-4 mr-2" />
-                                Capturar Foto
-                              </>
-                            )}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setShowCamera(false)}
-                            className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {capturedImage && (
-                      <div className="space-y-4">
-                        <div className="relative">
-                          <img
-                            src={capturedImage}
-                            alt="Foto capturada"
-                            className="w-full rounded-lg"
-                          />
-                          {faceDetected && (
-                            <div className="absolute top-2 right-2 bg-green-500 text-white p-1 rounded-full">
-                              <Check className="h-4 w-4" />
-                            </div>
-                          )}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={retakePhoto}
-                          className="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                        >
-                          <Camera className="h-4 w-4 mr-2" />
-                          Tirar Nova Foto
-                        </button>
-                      </div>
-                    )}
-
-                    {photoError && (
-                      <p className="text-sm text-red-600 dark:text-red-500">{photoError}</p>
-                    )}
-                    {errors.photo && (
-                      <p className="text-sm text-red-600 dark:text-red-500">{errors.photo}</p>
-                    )}
-                  </div>
-                </div>
+                <PhotoCaptureSection
+                  capturedImage={capturedImage}
+                  setCapturedImage={setCapturedImage}
+                  showCamera={showCamera}
+                  setShowCamera={setShowCamera}
+                  openCamera={openCamera}
+                  webcamRef={webcamRef}
+                  selectedCameraId={selectedCameraId}
+                  setSelectedCameraId={setSelectedCameraId}
+                  availableCameras={availableCameras}
+                  capturePhoto={capturePhoto}
+                  isCapturing={isCapturing}
+                  cameraLoading={cameraLoading}
+                  setPhotoError={setPhotoError}
+                  retakePhoto={retakePhoto}
+                  faceDetected={faceDetected}
+                  photoError={photoError}
+                  errors={errors}
+                />
               </div>
 
               {/* Personal Information */}

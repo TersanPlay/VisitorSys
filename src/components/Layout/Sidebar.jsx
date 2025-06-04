@@ -49,34 +49,11 @@ const Sidebar = ({ onNavigate }) => {
       icon: LogIn,
       permission: 'visitor_entry'
     },
-    {
-      name: 'Setores',
-      href: '/sectors',
-      icon: Building2,
-      permission: 'sectors_manage',
-      submenu: [
-        {
-          name: 'Listar Setores',
-          href: '/sectors',
-          permission: 'sectors_manage'
-        },
-        {
-          name: 'Adicionar Setor',
-          href: '/sectors/add',
-          permission: 'sectors_manage'
-        },
-        {
-          name: 'Criar Setores em Lote',
-          href: '/sectors/seeder',
-          permission: 'sectors_manage' // Ou uma permissão mais específica se necessário
-        }
-      ]
-    },
+
     {
       name: 'Departamentos',
       href: '/departments',
       icon: Building2,
-      permission: 'sectors_manage'
     },
     {
       name: 'Relatórios',

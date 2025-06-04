@@ -59,15 +59,21 @@ const Login = () => {
 
     try {
       setLoading(true)
-      await login(formData.email, formData.password, formData.rememberMe)
+      const result = await login(formData.email, formData.password, formData.rememberMe)
       
-      const from = location.state?.from?.pathname || '/dashboard'
-      toast.success('Login realizado com sucesso!')
-      
-      // Navigation will be handled by the auth context
+      if (result.success) {
+        // A notificação de sucesso já é tratada no AuthContext
+        // const from = location.state?.from?.pathname || '/dashboard'
+        // toast.success('Login realizado com sucesso!')
+        // A navegação será tratada pelo AuthContext e pelo redirecionamento no topo do componente
+      } else {
+        // A notificação de erro já é tratada no AuthContext
+        // toast.error(result.message || 'Erro ao fazer login')
+      }
     } catch (error) {
       console.error('Login error:', error)
-      toast.error(error.message || 'Erro ao fazer login')
+      // A notificação de erro genérico já é tratada no AuthContext
+      // toast.error(error.message || 'Erro ao fazer login')
     } finally {
       setLoading(false)
     }

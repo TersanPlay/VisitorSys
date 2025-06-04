@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { toast } from 'react-hot-toast'
 import { departmentService } from '../services/departmentService'
-import { sectorService } from '../services/sectorService'
 import { Button } from './UI/button'
 import { Input } from './UI/input'
 import { Label } from './UI/label'
@@ -16,10 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 const DepartmentForm = ({ department = null, onSave, onCancel }) => {
   const isEditing = !!department
   const [loading, setLoading] = useState(false)
-  const [sectors, setSectors] = useState([])
-  const [linkedSectors, setLinkedSectors] = useState([])
-  const [showSectorDialog, setShowSectorDialog] = useState(false)
-  const [selectedSector, setSelectedSector] = useState('')
+
 
   // Estado para os campos do formulário
   const [formData, setFormData] = useState({
@@ -88,36 +84,11 @@ const DepartmentForm = ({ department = null, onSave, onCancel }) => {
         imagePreview: department.imageUrl || null
       })
 
-      // Carregar setores vinculados
-      loadLinkedSectors(department.id)
+
     }
   }, [department, isEditing])
 
-  // Carregar lista de setores
-  useEffect(() => {
-    const loadSectors = async () => {
-      try {
-        const allSectors = await sectorService.getAllSectors()
-        setSectors(allSectors)
-      } catch (error) {
-        console.error('Erro ao carregar setores:', error)
-        toast.error('Não foi possível carregar a lista de setores')
-      }
-    }
 
-    loadSectors()
-  }, [])
-
-  // Carregar setores vinculados ao departamento
-  const loadLinkedSectors = async (departmentId) => {
-    try {
-      const linked = await departmentService.getLinkedSectors(departmentId)
-      setLinkedSectors(linked)
-    } catch (error) {
-      console.error('Erro ao carregar setores vinculados:', error)
-      toast.error('Não foi possível carregar os setores vinculados')
-    }
-  }
 
   // Manipular mudanças nos campos do formulário
   const handleChange = (e) => {
@@ -171,46 +142,7 @@ const DepartmentForm = ({ department = null, onSave, onCancel }) => {
     }
   }
 
-  // Vincular setor ao departamento
-  const handleLinkSector = async () => {
-    if (!selectedSector) return
 
-    try {
-      if (isEditing) {
-        await departmentService.linkSector(department.id, selectedSector)
-        await loadLinkedSectors(department.id)
-        toast.success('Setor vinculado com sucesso')
-      } else {
-        // Para novo departamento, apenas adiciona à lista temporária
-        const sectorToAdd = sectors.find(s => s.id === selectedSector)
-        if (sectorToAdd && !linkedSectors.some(s => s.id === selectedSector)) {
-          setLinkedSectors(prev => [...prev, sectorToAdd])
-        }
-      }
-      setSelectedSector('')
-      setShowSectorDialog(false)
-    } catch (error) {
-      console.error('Erro ao vincular setor:', error)
-      toast.error('Não foi possível vincular o setor')
-    }
-  }
-
-  // Desvincular setor do departamento
-  const handleUnlinkSector = async (sectorId) => {
-    try {
-      if (isEditing) {
-        await departmentService.unlinkSector(department.id, sectorId)
-        await loadLinkedSectors(department.id)
-        toast.success('Setor desvinculado com sucesso')
-      } else {
-        // Para novo departamento, apenas remove da lista temporária
-        setLinkedSectors(prev => prev.filter(s => s.id !== sectorId))
-      }
-    } catch (error) {
-      console.error('Erro ao desvincular setor:', error)
-      toast.error('Não foi possível desvincular o setor')
-    }
-  }
 
   // Enviar formulário
   const handleSubmit = async (e) => {
@@ -240,12 +172,6 @@ const DepartmentForm = ({ department = null, onSave, onCancel }) => {
           formData.imageFile
         )
 
-        // Vincular setores para novo departamento
-        if (result.success && linkedSectors.length > 0) {
-          for (const sector of linkedSectors) {
-            await departmentService.linkSector(result.department.id, sector.id)
-          }
-        }
       }
 
       toast.success(result.message)
@@ -583,16 +509,18 @@ const DepartmentForm = ({ department = null, onSave, onCancel }) => {
                 value={formData.observations}
                 onChange={handleChange}
                 rows={3}
-                placeholder="Informações adicionais sobre o departamento"
                 className="pl-10"
               />
             </div>
+          </div>
 
-            {/* Imagem/Brasão */}
+          {/* Seção de Imagem do Departamento */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium">Imagem do Departamento</h3>
             <div className="space-y-2">
               <Label htmlFor="imageFile" className="flex items-center gap-2">
                 <Camera className="h-4 w-4" />
-                Imagem/Brasão
+                Selecionar Imagem
               </Label>
               <Input
                 id="imageFile"
@@ -603,57 +531,18 @@ const DepartmentForm = ({ department = null, onSave, onCancel }) => {
                 className="pl-10"
               />
               {formData.imagePreview && (
-                <div className="mt-2">
+                <div className="mt-4">
                   <img
                     src={formData.imagePreview}
-                    alt="Prévia da imagem"
-                    className="max-h-40 rounded-md"
+                    alt="Pré-visualização da imagem"
+                    className="max-h-48 w-auto rounded-md border object-contain"
                   />
                 </div>
               )}
             </div>
           </div>
 
-          {/* Seção de setores vinculados */}
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-medium flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Setores Vinculados
-              </h3>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setShowSectorDialog(true)}
-              >
-                <Plus className="h-4 w-4 mr-1" /> Adicionar Setor
-              </Button>
-            </div>
 
-            {linkedSectors.length > 0 ? (
-              <div className="space-y-2">
-                {linkedSectors.map(sector => (
-                  <div key={sector.id} className="flex justify-between items-center p-2 bg-muted rounded-md">
-                    <div>
-                      <span className="font-medium">{sector.name}</span>
-                      {sector.code && <span className="ml-2 text-sm text-muted-foreground">({sector.code})</span>}
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleUnlinkSector(sector.id)}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">Nenhum setor vinculado a este departamento.</p>
-            )}
-          </div>
 
           {/* Botões de ação */}
           <CardFooter className="px-0 pt-6 flex justify-end space-x-2">
@@ -680,52 +569,7 @@ const DepartmentForm = ({ department = null, onSave, onCancel }) => {
         </form>
       </CardContent>
 
-      {/* Diálogo para adicionar setor */}
-      <Dialog open={showSectorDialog} onOpenChange={setShowSectorDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Adicionar Setor</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="sectorSelect">Selecione um Setor</Label>
-              <Select
-                value={selectedSector}
-                onValueChange={setSelectedSector}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um setor" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sectors
-                    .filter(sector => !linkedSectors.some(s => s.id === sector.id))
-                    .map(sector => (
-                      <SelectItem key={sector.id} value={sector.id}>
-                        {sector.name} {sector.code && `(${sector.code})`}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex justify-end space-x-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowSectorDialog(false)}
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="button"
-                onClick={handleLinkSector}
-                disabled={!selectedSector}
-              >
-                Adicionar
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+
     </Card>
   )
 }

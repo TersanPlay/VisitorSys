@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { sectorService } from '../services/sectorService'
+import { departmentService } from '../services/departmentService'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/UI/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/UI/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/UI/tabs'
@@ -16,7 +16,6 @@ import 'jspdf-autotable'
 
 const TabelaGabinete = () => {
   const { id } = useParams()
-  const [sector, setSector] = useState(null)
   const [loading, setLoading] = useState(true)
   const [servidores, setServidores] = useState([])
   const [filteredServidores, setFilteredServidores] = useState([])
@@ -33,48 +32,7 @@ const TabelaGabinete = () => {
 
   // Carregar dados do setor
   useEffect(() => {
-    const loadSector = async () => {
-      try {
-        setLoading(true)
-        const sectorData = await sectorService.getSectorById(id)
-        setSector(sectorData)
 
-        // Simular carregamento de meses disponíveis
-        // Em produção, isso viria de uma API que verificaria as pastas existentes
-        const currentDate = new Date()
-        const currentYear = currentDate.getFullYear()
-        const currentMonth = currentDate.getMonth() + 1
-
-        const months = [
-          { value: '01', label: 'Janeiro' },
-          { value: '02', label: 'Fevereiro' },
-          { value: '03', label: 'Março' },
-          { value: '04', label: 'Abril' },
-          { value: '05', label: 'Maio' },
-          { value: '06', label: 'Junho' },
-          { value: '07', label: 'Julho' },
-          { value: '08', label: 'Agosto' },
-          { value: '09', label: 'Setembro' },
-          { value: '10', label: 'Outubro' },
-          { value: '11', label: 'Novembro' },
-          { value: '12', label: 'Dezembro' }
-        ].filter(month => parseInt(month.value) <= currentMonth)
-
-        setAvailableMonths(months)
-        setSelectedMonth(String(currentMonth).padStart(2, '0'))
-
-        // Carregar dados de servidores para o mês atual
-        const currentMonthStr = String(currentMonth).padStart(2, '0')
-        loadServidores(currentMonthStr, currentYear)
-      } catch (error) {
-        console.error('Erro ao carregar dados do setor:', error)
-        toast.error('Não foi possível carregar os dados do setor')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadSector()
   }, [id])
 
   // Filtrar servidores quando o termo de busca mudar
@@ -100,7 +58,8 @@ const TabelaGabinete = () => {
     try {
       setLoading(true)
       // Usar o novo método para buscar servidores reais
-      const servidoresData = await sectorService.getServidoresBySector(id, month, year)
+      // TODO: Implementar ou adaptar getServidoresByDepartment no departmentService
+      const servidoresData = await departmentService.getServidoresByDepartment(id, month, year)
 
       if (servidoresData && servidoresData.length > 0) {
         setServidores(servidoresData)
@@ -132,7 +91,8 @@ const TabelaGabinete = () => {
       const currentYear = new Date().getFullYear()
 
       // Buscar servidores do mês de comparação
-      const mesAnteriorServidores = await sectorService.getServidoresBySector(id, compareMonth, currentYear)
+      // TODO: Implementar ou adaptar getServidoresByDepartment no departmentService
+      const mesAnteriorServidores = await departmentService.getServidoresByDepartment(id, compareMonth, currentYear)
 
       if (!mesAnteriorServidores || mesAnteriorServidores.length === 0) {
         toast.error(`Não foram encontrados dados para o mês ${compareMonth}/${currentYear}`)
@@ -193,7 +153,7 @@ const TabelaGabinete = () => {
     setCompareMonth(month)
   }
 
-  if (loading && !sector) {
+  if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -204,7 +164,6 @@ const TabelaGabinete = () => {
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">{sector?.name || 'Setor'}</h1>
         <div className="flex space-x-2">
           <Button onClick={exportarExcel} variant="outline" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />

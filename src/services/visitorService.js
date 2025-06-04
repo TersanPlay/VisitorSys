@@ -81,9 +81,7 @@ class VisitorService {
       }
 
       // Removida validação de setor ou departamento que não existem mais na interface
-      // const hasSectorOrDepartment = (visitorData.sectors && visitorData.sectors.length > 0) ||
       //   (visitorData.departments && visitorData.departments.length > 0)
-      // if (!hasSectorOrDepartment) {
       //   missingFields.push('setor ou departamento')
       // }
 

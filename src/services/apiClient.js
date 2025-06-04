@@ -3,7 +3,7 @@ import toast from 'react-hot-toast'
 
 // Create axios instance
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3001/api',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000',
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
@@ -33,7 +33,7 @@ apiClient.interceptors.response.use(
     if (error.response) {
       // Server responded with error status
       const { status, data } = error.response
-      
+
       switch (status) {
         case 401:
           // Unauthorized - redirect to login
@@ -73,7 +73,7 @@ apiClient.interceptors.response.use(
       // Other error
       toast.error('Erro inesperado. Tente novamente.')
     }
-    
+
     return Promise.reject(error)
   }
 )
@@ -91,13 +91,13 @@ export const api = {
 export const uploadFile = async (url, file, onProgress = null) => {
   const formData = new FormData()
   formData.append('file', file)
-  
+
   const config = {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
   }
-  
+
   if (onProgress) {
     config.onUploadProgress = (progressEvent) => {
       const percentCompleted = Math.round(
@@ -106,7 +106,7 @@ export const uploadFile = async (url, file, onProgress = null) => {
       onProgress(percentCompleted)
     }
   }
-  
+
   return apiClient.post(url, formData, config)
 }
 
@@ -116,7 +116,7 @@ export const downloadFile = async (url, filename) => {
     const response = await apiClient.get(url, {
       responseType: 'blob',
     })
-    
+
     const blob = new Blob([response.data])
     const downloadUrl = window.URL.createObjectURL(blob)
     const link = document.createElement('a')

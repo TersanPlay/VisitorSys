@@ -7,6 +7,7 @@ O Sistema de Registro de Visitantes é uma aplicação web moderna desenvolvida 
 ## Tecnologias Utilizadas
 
 - **Frontend**: React, Vite, Tailwind CSS
+- **Backend**: Node.js, Express.js
 - **Bibliotecas principais**:
   - React Router DOM para navegação
   - Chart.js e React-Chartjs-2 para visualizações e gráficos
@@ -126,7 +127,12 @@ O Sistema de Registro de Visitantes é uma aplicação web moderna desenvolvida 
 ## Estrutura do Projeto
 
 ```
-├── src/
+├── backend/              # Aplicação Backend (Node.js/Express)
+│   ├── node_modules/
+│   ├── index.js          # Ponto de entrada do servidor backend
+│   ├── package.json
+│   └── ...               # Outros arquivos e pastas do backend
+├── src/                  # Aplicação Frontend (React/Vite)
 │   ├── components/       # Componentes reutilizáveis
 │   │   ├── Layout/       # Componentes de layout (Sidebar, Header)
 │   │   └── UI/           # Componentes de interface (botões, inputs)
@@ -135,10 +141,11 @@ O Sistema de Registro de Visitantes é uma aplicação web moderna desenvolvida 
 │   │   ├── Auth/         # Páginas de autenticação
 │   │   ├── Dashboard/    # Dashboard e componentes relacionados
 │   │   └── ...           # Outras páginas
-│   ├── services/         # Serviços e APIs
+│   ├── services/         # Serviços e APIs (chamadas ao backend)
 │   ├── App.jsx           # Componente principal e rotas
-│   └── main.jsx          # Ponto de entrada da aplicação
-└── ...                   # Arquivos de configuração
+│   └── main.jsx          # Ponto de entrada da aplicação frontend
+├── public/               # Arquivos estáticos do frontend
+└── ...                   # Arquivos de configuração (vite.config.js, tailwind.config.js, etc.)
 ```
 
 ## Instalação e Uso
@@ -156,21 +163,36 @@ O Sistema de Registro de Visitantes é uma aplicação web moderna desenvolvida 
    cd sistema-registro-visitantes
    ```
 
-2. Instale as dependências
+2. Instale as dependências do Frontend
    ```bash
    npm install
    # ou
    yarn
    ```
 
-3. Inicie o servidor de desenvolvimento
+3. Instale as dependências do Backend
+   ```bash
+   cd backend
+   npm install
+   cd ..
+   ```
+
+4. Inicie o servidor de desenvolvimento do Frontend
    ```bash
    npm run dev
    # ou
    yarn dev
    ```
+   O frontend estará acessível em `http://localhost:5173` (ou a porta configurada pelo Vite).
 
-4. Acesse a aplicação em `http://localhost:3000`
+5. Em um novo terminal, inicie o servidor Backend
+   ```bash
+   cd backend
+   npm start
+   ```
+   O backend estará rodando em `http://localhost:3001` (ou a porta configurada no `backend/index.js`).
+
+6. Acesse a aplicação frontend no seu navegador (geralmente `http://localhost:5173`).
 
 ### Credenciais de Demonstração
 
